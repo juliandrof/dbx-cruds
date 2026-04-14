@@ -93,7 +93,7 @@ def create_data_table(table_name: str, columns: list[dict]):
     cols_sql = ",\n    ".join(col_defs)
     ddl = f"""
         CREATE TABLE IF NOT EXISTS "{table_name}" (
-            _id SERIAL PRIMARY KEY,
+            _id BIGSERIAL PRIMARY KEY,
             {cols_sql},
             _is_deleted BOOLEAN DEFAULT FALSE,
             _created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
