@@ -52,7 +52,7 @@ def create_crud(body: CrudCreate):
     if not body.columns:
         raise HTTPException(400, "É necessário definir pelo menos uma coluna")
 
-    table_name = "crud_" + sanitize_name(body.name)
+    base_table = "crud_" + sanitize_name(body.name)
 
     columns_meta = []
     for i, col in enumerate(body.columns):
@@ -68,16 +68,23 @@ def create_crud(body: CrudCreate):
 
     with pool.connection() as conn:
         with conn.cursor() as cur:
-            # Check unique table name
-            cur.execute("SELECT id FROM crud_definitions WHERE table_name = %s AND is_deleted = FALSE", (table_name,))
+            # Find unique table name (check ALL rows, including deleted)
+            table_name = base_table
+            cur.execute("SELECT table_name FROM crud_definitions WHERE table_name = %s", (table_name,))
             if cur.fetchone():
-                # Append numeric suffix
+                # Find next available number
                 cur.execute(
-                    "SELECT COUNT(*) FROM crud_definitions WHERE table_name LIKE %s",
-                    (table_name + "%",),
+                    "SELECT table_name FROM crud_definitions WHERE table_name LIKE %s ORDER BY table_name",
+                    (base_table + "%",),
                 )
-                cnt = cur.fetchone()[0]
-                table_name = f"{table_name}_{cnt}"
+                existing = {r[0] for r in cur.fetchall()}
+                n = 2
+                while True:
+                    candidate = f"{base_table}{n}"
+                    if candidate not in existing:
+                        table_name = candidate
+                        break
+                    n += 1
 
             cur.execute(
                 """INSERT INTO crud_definitions (name, description, table_name, color)
