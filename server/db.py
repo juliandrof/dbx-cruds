@@ -2,9 +2,6 @@ import os
 import re
 import psycopg
 from psycopg_pool import ConnectionPool
-from databricks.sdk import WorkspaceClient
-
-w = WorkspaceClient()
 
 TYPE_MAP = {
     "text": "TEXT",
@@ -15,28 +12,17 @@ TYPE_MAP = {
     "datetime": "TIMESTAMP",
 }
 
-
-class OAuthConnection(psycopg.Connection):
-    @classmethod
-    def connect(cls, conninfo="", **kwargs):
-        endpoint_name = os.environ["ENDPOINT_NAME"]
-        credential = w.postgres.generate_database_credential(endpoint=endpoint_name)
-        kwargs["password"] = credential.token
-        return super().connect(conninfo, **kwargs)
-
-
 username = os.environ.get("PGUSER", "")
 host = os.environ.get("PGHOST", "")
 port = os.environ.get("PGPORT", "5432")
 database = os.environ.get("PGDATABASE", "databricks_postgres")
+password = os.environ.get("PGPASSWORD", "")
 sslmode = os.environ.get("PGSSLMODE", "require")
 
 pool = ConnectionPool(
-    conninfo=f"dbname={database} user={username} host={host} port={port} sslmode={sslmode}",
-    connection_class=OAuthConnection,
+    conninfo=f"dbname={database} user={username} host={host} port={port} password={password} sslmode={sslmode}",
     min_size=1,
     max_size=10,
-    max_lifetime=2700,
     open=False,
 )
 

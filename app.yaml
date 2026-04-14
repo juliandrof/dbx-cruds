@@ -19,5 +19,7 @@ env:
     value: 'sentinela'
   - name: PGUSER
     value: '***SERVICE_PRINCIPAL_ID***'
+  - name: PGPASSWORD
+    value: '***REDACTED***'
   - name: PGSSLMODE
     value: 'require'
