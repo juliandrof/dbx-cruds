@@ -22,10 +22,12 @@ app.include_router(cruds.router, prefix="/api")
 app.include_router(data.router, prefix="/api")
 app.include_router(imports.router, prefix="/api")
 
-# Serve React frontend
+# Serve frontend
 frontend_dir = os.path.join(os.path.dirname(__file__), "frontend", "dist")
 if os.path.exists(frontend_dir):
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dir, "assets")), name="assets")
+    assets_dir = os.path.join(frontend_dir, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):

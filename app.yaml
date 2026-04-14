@@ -10,4 +10,14 @@ command:
 
 env:
   - name: ENDPOINT_NAME
-    value: '<SEU_ENDPOINT_NAME_AQUI>'
+    value: 'projects/sentinela/branches/production/endpoints/primary'
+  - name: PGHOST
+    value: '***LAKEBASE_HOST***'
+  - name: PGPORT
+    value: '5432'
+  - name: PGDATABASE
+    value: 'sentinela'
+  - name: PGUSER
+    value: '***SERVICE_PRINCIPAL_ID***'
+  - name: PGSSLMODE
+    value: 'require'
