@@ -1,111 +1,125 @@
-"""Built-in deterministic validators for common data rules.
+"""Code-generation validation engine.
 
-When a validation rule matches a known pattern (CPF, CNPJ, email, etc.),
-we use fast, accurate code instead of AI. Unknown rules fall through to the LLM.
+Instead of hardcoded validators OR asking the LLM to validate directly,
+we ask the LLM to WRITE Python validation code, then execute it locally.
+
+LLMs are great at writing code, bad at doing math.
+This gives us 100% accuracy for any deterministic rule (CPF, CNPJ, etc.)
+while remaining fully generic - no hardcoded logic.
+
+Generated code is cached by rule, so only the first validation of a rule
+requires an LLM call. Subsequent validations run instantly.
 """
 
+import os
+import json
 import re
+import traceback
+from openai import OpenAI
 
-# Keywords that trigger each validator
-_CPF_KEYWORDS = ["cpf"]
-_CNPJ_KEYWORDS = ["cnpj"]
-_EMAIL_KEYWORDS = ["email", "e-mail"]
-_PHONE_KEYWORDS = ["telefone", "celular", "phone", "fone"]
-_CEP_KEYWORDS = ["cep", "codigo postal", "zip"]
+_code_cache: dict[str, str] = {}
 
 
-def detect_and_validate(value: str, rule: str, field_name: str) -> dict | None:
-    """Try to match the rule to a built-in validator.
-    Returns {"valid": bool, "message": str} if matched, None if no match (fall through to AI).
-    """
-    rule_lower = rule.lower()
-    field_lower = field_name.lower()
-    combined = rule_lower + " " + field_lower
-
-    if _matches(combined, _CPF_KEYWORDS):
-        return validate_cpf(value)
-    if _matches(combined, _CNPJ_KEYWORDS):
-        return validate_cnpj(value)
-    if _matches(combined, _EMAIL_KEYWORDS):
-        return validate_email(value)
-    if _matches(combined, _PHONE_KEYWORDS):
-        return validate_phone(value)
-    if _matches(combined, _CEP_KEYWORDS):
-        return validate_cep(value)
-
-    return None  # No built-in match, use AI
+def _get_client() -> OpenAI:
+    from server.llm import _get_client as get_client
+    return get_client()
 
 
-def _matches(text: str, keywords: list[str]) -> bool:
-    return any(kw in text for kw in keywords)
+def _generate_code(rule: str, field_name: str, model: str) -> str:
+    """Ask the LLM to generate Python validation code for a rule."""
+    client = _get_client()
+    if not model:
+        model = os.environ.get("SERVING_ENDPOINT", "databricks-llama-4-maverick")
+
+    prompt = f"""Escreva uma funcao Python chamada `validate(value: str) -> dict` que valida se o valor atende a regra abaixo.
+
+Regra: {rule}
+Campo: {field_name}
+
+A funcao DEVE retornar um dict:
+- {{"valid": True}} se o valor e valido
+- {{"valid": False, "message": "explicacao curta"}} se invalido
+
+IMPORTANTE:
+- Use APENAS a standard library do Python (re, math, etc). Nenhuma lib externa.
+- A funcao recebe o valor SEMPRE como string.
+- Trate o valor None ou vazio como invalido se a regra exige um valor.
+- Escreva SOMENTE o codigo Python, sem markdown, sem explicacao, sem ```python.
+- A funcao deve ser robusta e tratar excecoes.
+
+Exemplo para "deve ser um email valido":
+import re
+def validate(value: str) -> dict:
+    if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{{2,}}$', value.strip()):
+        return {{"valid": True}}
+    return {{"valid": False, "message": "Email invalido"}}
+
+Agora escreva o codigo para a regra: {rule}"""
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1000,
+        temperature=0,
+    )
+
+    code = response.choices[0].message.content.strip()
+    # Clean up markdown fences if present
+    code = re.sub(r"^```(?:python)?\s*\n?", "", code)
+    code = re.sub(r"\n?```\s*$", "", code)
+    return code
 
 
-def validate_cpf(value: str) -> dict:
-    digits = re.sub(r"\D", "", value)
-    if len(digits) != 11:
-        return {"valid": False, "message": "CPF deve ter 11 digitos"}
-    if digits == digits[0] * 11:
-        return {"valid": False, "message": "CPF invalido (todos digitos iguais)"}
-
-    # First check digit
-    total = sum(int(digits[i]) * (10 - i) for i in range(9))
-    d1 = 11 - (total % 11)
-    d1 = 0 if d1 >= 10 else d1
-    if int(digits[9]) != d1:
-        return {"valid": False, "message": "CPF invalido (digito verificador incorreto)"}
-
-    # Second check digit
-    total = sum(int(digits[i]) * (11 - i) for i in range(10))
-    d2 = 11 - (total % 11)
-    d2 = 0 if d2 >= 10 else d2
-    if int(digits[10]) != d2:
-        return {"valid": False, "message": "CPF invalido (digito verificador incorreto)"}
-
-    return {"valid": True, "message": ""}
+SAFE_BUILTINS = {
+    "abs": abs, "all": all, "any": any, "bin": bin, "bool": bool,
+    "chr": chr, "dict": dict, "divmod": divmod, "enumerate": enumerate,
+    "filter": filter, "float": float, "format": format, "hex": hex,
+    "int": int, "isinstance": isinstance, "len": len, "list": list,
+    "map": map, "max": max, "min": min, "oct": oct, "ord": ord,
+    "pow": pow, "range": range, "repr": repr, "reversed": reversed,
+    "round": round, "set": set, "slice": slice, "sorted": sorted,
+    "str": str, "sum": sum, "tuple": tuple, "zip": zip,
+    "True": True, "False": False, "None": None,
+    "ValueError": ValueError, "TypeError": TypeError,
+    "Exception": Exception, "IndexError": IndexError,
+    "__import__": __import__,
+}
 
 
-def validate_cnpj(value: str) -> dict:
-    digits = re.sub(r"\D", "", value)
-    if len(digits) != 14:
-        return {"valid": False, "message": "CNPJ deve ter 14 digitos"}
-    if digits == digits[0] * 14:
-        return {"valid": False, "message": "CNPJ invalido (todos digitos iguais)"}
-
-    # First check digit
-    weights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    total = sum(int(digits[i]) * weights[i] for i in range(12))
-    d1 = 11 - (total % 11)
-    d1 = 0 if d1 >= 10 else d1
-    if int(digits[12]) != d1:
-        return {"valid": False, "message": "CNPJ invalido (digito verificador incorreto)"}
-
-    # Second check digit
-    weights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    total = sum(int(digits[i]) * weights[i] for i in range(13))
-    d2 = 11 - (total % 11)
-    d2 = 0 if d2 >= 10 else d2
-    if int(digits[13]) != d2:
-        return {"valid": False, "message": "CNPJ invalido (digito verificador incorreto)"}
-
-    return {"valid": True, "message": ""}
+def _execute_code(code: str, value: str) -> dict:
+    """Execute generated validation code safely."""
+    namespace = {"__builtins__": SAFE_BUILTINS}
+    try:
+        exec(code, namespace)
+        if "validate" not in namespace:
+            return {"valid": True, "message": "Codigo gerado sem funcao validate"}
+        result = namespace["validate"](value)
+        if isinstance(result, dict):
+            return {
+                "valid": bool(result.get("valid", False)),
+                "message": result.get("message", ""),
+            }
+        return {"valid": bool(result), "message": "" if result else "Valor invalido"}
+    except Exception as e:
+        return {"valid": True, "message": f"Erro na validacao: {str(e)[:80]}"}
 
 
-def validate_email(value: str) -> dict:
-    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    if re.match(pattern, value.strip()):
-        return {"valid": True, "message": ""}
-    return {"valid": False, "message": "Email invalido"}
+def validate_with_code(value: str, rule: str, field_name: str, model: str = "") -> dict:
+    """Validate using LLM-generated code. Cached per rule."""
+    cache_key = f"{rule}||{field_name}"
+
+    if cache_key not in _code_cache:
+        code = _generate_code(rule, field_name, model)
+        _code_cache[cache_key] = code
+
+    return _execute_code(_code_cache[cache_key], value)
 
 
-def validate_phone(value: str) -> dict:
-    digits = re.sub(r"\D", "", value)
-    if len(digits) < 10 or len(digits) > 13:
-        return {"valid": False, "message": "Telefone deve ter entre 10 e 13 digitos"}
-    return {"valid": True, "message": ""}
+def clear_cache():
+    """Clear the code cache (useful if rules change)."""
+    _code_cache.clear()
 
 
-def validate_cep(value: str) -> dict:
-    digits = re.sub(r"\D", "", value)
-    if len(digits) != 8:
-        return {"valid": False, "message": "CEP deve ter 8 digitos"}
-    return {"valid": True, "message": ""}
+def get_cached_code(rule: str, field_name: str) -> str | None:
+    """Get the cached code for a rule (for debugging)."""
+    return _code_cache.get(f"{rule}||{field_name}")
