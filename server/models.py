@@ -38,6 +38,7 @@ class ValidateRequest(BaseModel):
     value: str
     rule: str
     field_name: str = ""
+    model: str = ""
 
 
 class RowCreate(BaseModel):

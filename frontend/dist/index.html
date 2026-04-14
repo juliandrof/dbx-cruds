@@ -77,8 +77,9 @@ function useAIValidation(){
   const validate=async(fieldKey,value,rule,fieldName)=>{
     if(!rule||!value){setResults(r=>({...r,[fieldKey]:null}));return}
     setLoading(l=>({...l,[fieldKey]:true}));
+    const model=localStorage.getItem('dbx-ai-model')||'';
     try{
-      const res=await api('/validate',{method:'POST',body:JSON.stringify({value,rule,field_name:fieldName})});
+      const res=await api('/validate',{method:'POST',body:JSON.stringify({value,rule,field_name:fieldName,model})});
       setResults(r=>({...r,[fieldKey]:res}));
     }catch{setResults(r=>({...r,[fieldKey]:{valid:true,message:'Erro na validacao'}}));}
     finally{setLoading(l=>({...l,[fieldKey]:false}))}
@@ -470,17 +471,42 @@ function Settings({onNav}){
   const ACCENTS=[{n:'Indigo',v:'#6366f1'},{n:'Violeta',v:'#8b5cf6'},{n:'Rosa',v:'#ec4899'},{n:'Vermelho',v:'#ef4444'},{n:'Laranja',v:'#f97316'},{n:'Amarelo',v:'#eab308'},{n:'Verde',v:'#22c55e'},{n:'Teal',v:'#14b8a6'},{n:'Ciano',v:'#06b6d4'},{n:'Azul',v:'#3b82f6'},{n:'Slate',v:'#64748b'},{n:'Escuro',v:'#1e293b'}];
   const[theme,setTheme]=useState(localStorage.getItem('dbx-theme')||'light');
   const[accent,setAccent]=useState(localStorage.getItem('dbx-accent')||'#6366f1');
+  const[aiModel,setAiModel]=useState(localStorage.getItem('dbx-ai-model')||'');
+  const[models,setModels]=useState([]);
+  const[defaultModel,setDefaultModel]=useState('');
+  const[loadingModels,setLoadingModels]=useState(true);
+  const{add}=useToast();
+
+  useEffect(()=>{api('/models').then(d=>{setModels(d.models||[]);setDefaultModel(d.default||'');if(!aiModel)setAiModel(d.default||'')}).catch(()=>{}).finally(()=>setLoadingModels(false))},[]);
 
   const applyTheme=t=>{document.documentElement.classList.toggle('dark',t==='dark');document.body.className=t==='dark'?'bg-gray-950 text-gray-100':'bg-gray-50 text-gray-900';localStorage.setItem('dbx-theme',t);setTheme(t)};
   const applyAccent=c=>{const h=c.replace('#','');const[r,g,b]=[parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];document.documentElement.style.setProperty('--accent',`${r} ${g} ${b}`);localStorage.setItem('dbx-accent',c);setAccent(c)};
+  const applyModel=m=>{localStorage.setItem('dbx-ai-model',m);setAiModel(m);add('success',`Modelo alterado para ${m}`)};
 
   return <div className="max-w-2xl mx-auto animate-fade-in">
     <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar</button>
-    <h1 className="text-2xl font-bold mb-2">Configuracoes</h1><p className="text-gray-500 dark:text-gray-400 mb-8">Personalize o visual</p>
+    <h1 className="text-2xl font-bold mb-2">Configuracoes</h1><p className="text-gray-500 dark:text-gray-400 mb-8">Personalize o visual e o comportamento da IA</p>
+
+    {/* AI Model */}
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
+      <h2 className="font-semibold text-lg mb-1 flex items-center gap-2">&#9889; Modelo de IA</h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Modelo usado para validacao inteligente de dados</p>
+      {loadingModels?<div className="flex items-center gap-2 text-sm text-gray-400"><span className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"/>Carregando modelos...</div>:
+      <div className="space-y-2">
+        <select value={aiModel} onChange={e=>applyModel(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          {models.map(m=><option key={m} value={m}>{m}{m===defaultModel?' (padrao)':''}</option>)}
+        </select>
+        <p className="text-xs text-gray-400">Modelo atual: <span className="font-mono accent-text">{aiModel||defaultModel}</span></p>
+      </div>}
+    </div>
+
+    {/* Theme */}
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
       <h2 className="font-semibold text-lg mb-4">Tema</h2>
       <div className="grid grid-cols-2 gap-3">{[{t:'light',l:'Claro',icon:'☀️'},{t:'dark',l:'Escuro',icon:'🌙'}].map(o=><button key={o.t} onClick={()=>applyTheme(o.t)} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 ${theme===o.t?'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30':'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}><span className="text-3xl">{o.icon}</span><span className="font-medium text-sm">{o.l}</span></button>)}</div>
     </div>
+
+    {/* Accent color */}
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
       <h2 className="font-semibold text-lg mb-4">Cor de destaque</h2>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">{ACCENTS.map(c=><button key={c.v} onClick={()=>applyAccent(c.v)} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${accent===c.v?'ring-2 ring-offset-2 ring-gray-400 dark:ring-offset-gray-900 scale-105':'hover:bg-gray-50 dark:hover:bg-gray-800'}`}><div className="w-10 h-10 rounded-xl shadow-sm" style={{backgroundColor:c.v}}/><span className="text-xs text-gray-500 dark:text-gray-400">{c.n}</span></button>)}</div>
