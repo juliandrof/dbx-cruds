@@ -20,8 +20,9 @@ body{font-family:'Inter',system-ui,sans-serif}
 .animate-slide-in{animation:slideIn .3s ease-out}
 .card-hover{transition:all .2s}.card-hover:hover{transform:translateY(-2px);box-shadow:0 10px 25px -5px rgb(0 0 0/.1)}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:9999px}
-/* DARK MODE FIX: inputs always have dark text */
-input,select,textarea{color:#111827 !important}
+/* Inputs: dark text on light bg, light text on dark bg */
+input,select,textarea{color:#111827}
+.dark input,.dark select,.dark textarea{color:#f3f4f6 !important}
 input::placeholder,textarea::placeholder{color:#9ca3af !important}
 </style>
 </head>
