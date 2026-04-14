@@ -16,11 +16,11 @@ def _get_crud_meta(cur, crud_id: int):
     table_name = row[0]
 
     cur.execute(
-        """SELECT db_column, name, data_type FROM crud_columns
+        """SELECT db_column, name, data_type, is_required FROM crud_columns
            WHERE crud_id = %s AND is_deleted = FALSE ORDER BY position""",
         (crud_id,),
     )
-    columns = [{"db_column": r[0], "name": r[1], "data_type": r[2]} for r in cur.fetchall()]
+    columns = [{"db_column": r[0], "name": r[1], "data_type": r[2], "is_required": r[3]} for r in cur.fetchall()]
     return table_name, columns
 
 
