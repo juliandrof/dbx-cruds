@@ -27,6 +27,27 @@ def _get_client() -> OpenAI:
     return OpenAI(api_key=token, base_url=f"{host}/serving-endpoints")
 
 
+KNOWN_MODELS = [
+    "databricks-llama-4-maverick",
+    "databricks-meta-llama-3-3-70b-instruct",
+    "databricks-meta-llama-3.1-405b-instruct",
+    "databricks-meta-llama-3-1-8b-instruct",
+    "databricks-claude-sonnet-4-6",
+    "databricks-claude-sonnet-4-5",
+    "databricks-claude-opus-4-6",
+    "databricks-claude-haiku-4-5",
+    "databricks-gpt-5-4",
+    "databricks-gpt-5-4-mini",
+    "databricks-gpt-5-2",
+    "databricks-gpt-5-mini",
+    "databricks-gemini-3-1-pro",
+    "databricks-gemini-3-1-flash-lite",
+    "databricks-gemini-3-pro",
+    "databricks-gemini-3-flash",
+    "databricks-qwen3-next-80b-a3b-instruct",
+]
+
+
 def list_models() -> list[str]:
     """List available Foundation Model serving endpoints."""
     try:
@@ -36,10 +57,12 @@ def list_models() -> list[str]:
         for ep in endpoints:
             if ep.name and ep.name.startswith("databricks-") and ep.state and ep.state.ready == "READY":
                 models.append(ep.name)
-        models.sort()
-        return models
+        if models:
+            models.sort()
+            return models
     except Exception:
-        return [os.environ.get("SERVING_ENDPOINT", "databricks-llama-4-maverick")]
+        pass
+    return KNOWN_MODELS
 
 
 def validate_value(value: str, rule: str, field_name: str = "", model: str = "") -> dict:
