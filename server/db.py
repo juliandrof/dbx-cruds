@@ -79,6 +79,19 @@ def init_schema():
             cur.execute("""
                 ALTER TABLE crud_columns ADD COLUMN IF NOT EXISTS validation_rule TEXT DEFAULT ''
             """)
+            # Validation tools library (auto-growing, reusable across forms)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS validation_tools (
+                    id SERIAL PRIMARY KEY,
+                    keywords TEXT NOT NULL,
+                    rule_example TEXT NOT NULL,
+                    tool_name TEXT NOT NULL,
+                    code TEXT NOT NULL,
+                    usage_count INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
         conn.commit()
 
 
