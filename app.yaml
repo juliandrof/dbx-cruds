@@ -23,3 +23,5 @@ env:
     value: '***REDACTED***'
   - name: PGSSLMODE
     value: 'require'
+  - name: SERVING_ENDPOINT
+    value: 'databricks-llama-4-maverick'

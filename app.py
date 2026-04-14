@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from server.db import pool, init_schema
-from server.routes import cruds, data, imports
+from server.routes import cruds, data, imports, ai
 
 
 @asynccontextmanager
@@ -21,6 +21,7 @@ app = FastAPI(title="DBX CRUDs", version="1.0.0", lifespan=lifespan)
 app.include_router(cruds.router, prefix="/api")
 app.include_router(data.router, prefix="/api")
 app.include_router(imports.router, prefix="/api")
+app.include_router(ai.router, prefix="/api")
 
 # Serve frontend
 frontend_dir = os.path.join(os.path.dirname(__file__), "frontend", "dist")

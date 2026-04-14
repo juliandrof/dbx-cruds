@@ -7,22 +7,22 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F4CA;</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}
-</script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
 <style>
 :root{--accent:99 102 241}
 body{font-family:'Inter',system-ui,sans-serif}
 .accent-bg{background-color:rgb(var(--accent))}
 .accent-bg-light{background-color:rgb(var(--accent)/0.1)}
 .accent-text{color:rgb(var(--accent))}
-.accent-border{border-color:rgb(var(--accent))}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 .animate-fade-in{animation:fadeIn .3s ease-out}
 .animate-slide-in{animation:slideIn .3s ease-out}
 .card-hover{transition:all .2s}.card-hover:hover{transform:translateY(-2px);box-shadow:0 10px 25px -5px rgb(0 0 0/.1)}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:9999px}
+/* DARK MODE FIX: inputs always have dark text */
+input,select,textarea{color:#111827 !important}
+input::placeholder,textarea::placeholder{color:#9ca3af !important}
 </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
@@ -58,15 +58,32 @@ function Confirm({open,title,msg,onOk,onCancel,danger}){
   if(!open)return null;
   return <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel}/>
-    <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+    <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-gray-600 mb-6">{msg}</p>
+      <p className="text-gray-600 dark:text-gray-400 mb-6">{msg}</p>
       <div className="flex justify-end gap-3">
-        <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-100">Cancelar</button>
+        <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800">Cancelar</button>
         <button onClick={onOk} className={`px-4 py-2 rounded-xl text-sm font-medium text-white ${danger?'bg-rose-600 hover:bg-rose-700':'accent-bg hover:opacity-90'}`}>{danger?'Excluir':'Confirmar'}</button>
       </div>
     </div>
   </div>
+}
+
+// ====== AI VALIDATION HOOK ======
+function useAIValidation(){
+  const[results,setResults]=useState({});
+  const[loading,setLoading]=useState({});
+  const validate=async(fieldKey,value,rule,fieldName)=>{
+    if(!rule||!value){setResults(r=>({...r,[fieldKey]:null}));return}
+    setLoading(l=>({...l,[fieldKey]:true}));
+    try{
+      const res=await api('/validate',{method:'POST',body:JSON.stringify({value,rule,field_name:fieldName})});
+      setResults(r=>({...r,[fieldKey]:res}));
+    }catch{setResults(r=>({...r,[fieldKey]:{valid:true,message:'Erro na validacao'}}));}
+    finally{setLoading(l=>({...l,[fieldKey]:false}))}
+  };
+  const clear=()=>{setResults({});setLoading({})};
+  return{results,loading,validate,clear};
 }
 
 // ====== DATA TYPES ======
@@ -79,6 +96,14 @@ const DATA_TYPES=[
   {value:'datetime',label:'Data/Hora',color:'text-cyan-600 bg-cyan-100'},
 ];
 const COLORS=['#6366f1','#8b5cf6','#ec4899','#f43f5e','#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6','#1e293b'];
+
+// ====== VALIDATION BADGE ======
+function ValidationBadge({result,loading}){
+  if(loading)return <span className="inline-flex items-center gap-1 text-xs text-gray-400"><span className="w-3 h-3 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"/>Validando...</span>;
+  if(!result)return null;
+  if(result.valid)return <span className="inline-flex items-center gap-1 text-xs text-emerald-600">&#10003; Valido</span>;
+  return <span className="inline-flex items-center gap-1 text-xs text-rose-600">&#10007; {result.message||'Invalido'}</span>;
+}
 
 // ====== DASHBOARD ======
 function Dashboard({onNav}){
@@ -93,7 +118,7 @@ function Dashboard({onNav}){
   useEffect(()=>{load()},[]);
 
   const toggleFav=async(c)=>{try{await api(`/cruds/${c.id}`,{method:'PUT',body:JSON.stringify({is_favorite:!c.is_favorite})});setCruds(cs=>cs.map(x=>x.id===c.id?{...x,is_favorite:!x.is_favorite}:x))}catch{add('error','Erro')}};
-  const handleDel=async()=>{if(!delId)return;try{await api(`/cruds/${delId}`,{method:'DELETE'});setCruds(cs=>cs.filter(x=>x.id!==delId));add('success','CRUD excluido')}catch{add('error','Erro')}setDelId(null)};
+  const handleDel=async()=>{if(!delId)return;try{await api(`/cruds/${delId}`,{method:'DELETE'});setCruds(cs=>cs.filter(x=>x.id!==delId));add('success','Tabela excluida')}catch{add('error','Erro')}setDelId(null)};
 
   const filtered=cruds.filter(c=>c.name.toLowerCase().includes(filter.toLowerCase())||c.description.toLowerCase().includes(filter.toLowerCase()));
 
@@ -101,102 +126,109 @@ function Dashboard({onNav}){
 
   return <div className="space-y-6 animate-fade-in">
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-      <div><h1 className="text-3xl font-bold tracking-tight">Painel</h1><p className="text-gray-500 mt-1">Gerencie seus formularios e dados</p></div>
-      <button onClick={()=>onNav('create')} className="inline-flex items-center gap-2 px-5 py-2.5 accent-bg text-white rounded-xl font-medium shadow-md hover:opacity-90">+ Novo CRUD</button>
+      <div><h1 className="text-3xl font-bold tracking-tight">Painel</h1><p className="text-gray-500 dark:text-gray-400 mt-1">Gerencie suas tabelas e dados</p></div>
+      <button onClick={()=>onNav('create')} className="inline-flex items-center gap-2 px-5 py-2.5 accent-bg text-white rounded-xl font-medium shadow-md hover:opacity-90">+ Nova Tabela</button>
     </div>
 
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      {[{l:'CRUDs',v:stats.total_cruds,c:'text-indigo-600 bg-indigo-100'},{l:'Registros',v:stats.total_rows,c:'text-emerald-600 bg-emerald-100'},{l:'Colunas',v:stats.total_columns,c:'text-amber-600 bg-amber-100'}].map(s=>
-        <div key={s.l} className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm"><div className="flex items-center gap-3"><div className={`p-2.5 rounded-xl ${s.c}`}><span className="text-lg font-bold">#</span></div><div><div className="text-2xl font-bold">{s.v.toLocaleString('pt-BR')}</div><div className="text-sm text-gray-500">{s.l}</div></div></div></div>
+      {[{l:'Tabelas',v:stats.total_cruds,c:'text-indigo-600 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400'},{l:'Registros',v:stats.total_rows,c:'text-emerald-600 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400'},{l:'Colunas',v:stats.total_columns,c:'text-amber-600 bg-amber-100 dark:bg-amber-950 dark:text-amber-400'}].map(s=>
+        <div key={s.l} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm"><div className="flex items-center gap-3"><div className={`p-2.5 rounded-xl ${s.c}`}><span className="text-lg font-bold">#</span></div><div><div className="text-2xl font-bold">{s.v.toLocaleString('pt-BR')}</div><div className="text-sm text-gray-500 dark:text-gray-400">{s.l}</div></div></div></div>
       )}
     </div>
 
-    {cruds.length>0&&<div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span><input type="text" placeholder="Buscar CRUDs..." value={filter} onChange={e=>setFilter(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>}
+    {cruds.length>0&&<div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span><input type="text" placeholder="Buscar tabelas..." value={filter} onChange={e=>setFilter(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>}
 
     {filtered.length===0?
-      <div className="text-center py-16"><div className="text-6xl mb-4">&#128202;</div><h3 className="text-lg font-semibold mb-2">{cruds.length===0?'Nenhum CRUD criado':'Nenhum resultado'}</h3><p className="text-gray-500 mb-6">{cruds.length===0?'Crie seu primeiro CRUD':'Tente outros termos'}</p>{cruds.length===0&&<button onClick={()=>onNav('create')} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium">Criar primeiro CRUD</button>}</div>
+      <div className="text-center py-16"><div className="text-6xl mb-4">&#128202;</div><h3 className="text-lg font-semibold mb-2">{cruds.length===0?'Nenhuma tabela criada':'Nenhum resultado'}</h3><p className="text-gray-500 dark:text-gray-400 mb-6">{cruds.length===0?'Crie sua primeira tabela para organizar seus dados':'Tente outros termos'}</p>{cruds.length===0&&<button onClick={()=>onNav('create')} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium">Criar primeira tabela</button>}</div>
     :
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(c=><div key={c.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm card-hover overflow-hidden">
+        {filtered.map(c=><div key={c.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm card-hover overflow-hidden">
           <div className="h-1.5" style={{backgroundColor:c.color}}/>
           <div className="p-5">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{backgroundColor:c.color}}>{c.name.substring(0,2).toUpperCase()}</div>
-                <div><h3 className="font-semibold">{c.name}</h3>{c.description&&<p className="text-sm text-gray-500 line-clamp-1">{c.description}</p>}</div>
+                <div><h3 className="font-semibold">{c.name}</h3>{c.description&&<p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{c.description}</p>}</div>
               </div>
-              <button onClick={()=>toggleFav(c)} className="p-1 rounded hover:bg-gray-100"><span style={{color:c.is_favorite?'#fbbf24':'#d1d5db'}}>{c.is_favorite?'★':'☆'}</span></button>
+              <button onClick={()=>toggleFav(c)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"><span style={{color:c.is_favorite?'#fbbf24':'#d1d5db'}}>{c.is_favorite?'★':'☆'}</span></button>
             </div>
-            <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
               <span>{c.column_count} colunas</span><span>{c.row_count.toLocaleString('pt-BR')} registros</span>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={()=>onNav('view',c.id)} className="flex-1 px-3 py-2 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">Abrir &rarr;</button>
-              <button onClick={()=>onNav('edit',c.id)} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50" title="Editar">&#9998;</button>
-              <button onClick={()=>onNav('import',c.id)} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50" title="Importar">&#128462;</button>
-              <button onClick={()=>setDelId(c.id)} className="p-2 rounded-xl border border-gray-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600" title="Excluir">&#128465;</button>
+              <button onClick={()=>onNav('edit',c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800" title="Editar">&#9998;</button>
+              <button onClick={()=>onNav('import',c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800" title="Importar">&#128462;</button>
+              <button onClick={()=>setDelId(c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-rose-50 dark:hover:bg-rose-950 hover:border-rose-300 hover:text-rose-600" title="Excluir">&#128465;</button>
             </div>
           </div>
         </div>)}
       </div>
     }
-    <Confirm open={delId!==null} title="Excluir CRUD" msg="Os dados serao preservados mas o CRUD nao ficara visivel." danger onOk={handleDel} onCancel={()=>setDelId(null)}/>
+    <Confirm open={delId!==null} title="Excluir Tabela" msg="Os dados serao preservados mas a tabela nao ficara visivel." danger onOk={handleDel} onCancel={()=>setDelId(null)}/>
   </div>
 }
 
-// ====== CREATE CRUD ======
+// ====== CREATE TABLE ======
 function CreateCrud({onNav}){
   const{add}=useToast();
   const[step,setStep]=useState(1);
   const[name,setName]=useState('');
   const[desc,setDesc]=useState('');
   const[color,setColor]=useState('#6366f1');
-  const[cols,setCols]=useState([{id:'1',name:'',data_type:'text',is_required:false}]);
+  const[cols,setCols]=useState([{id:'1',name:'',data_type:'text',is_required:false,validation_rule:''}]);
   const[busy,setBusy]=useState(false);
 
-  const addCol=()=>setCols([...cols,{id:Date.now().toString(),name:'',data_type:'text',is_required:false}]);
+  const addCol=()=>setCols([...cols,{id:Date.now().toString(),name:'',data_type:'text',is_required:false,validation_rule:''}]);
   const rmCol=id=>{if(cols.length>1)setCols(cols.filter(c=>c.id!==id))};
   const updCol=(id,f,v)=>setCols(cols.map(c=>c.id===id?{...c,[f]:v}:c));
 
-  const submit=async()=>{setBusy(true);try{const r=await api('/cruds',{method:'POST',body:JSON.stringify({name:name.trim(),description:desc.trim(),color,columns:cols.map(c=>({name:c.name.trim(),data_type:c.data_type,is_required:c.is_required}))})});add('success',`"${name}" criado!`);onNav('view',r.id)}catch(e){add('error',e.message)}finally{setBusy(false)}};
+  const submit=async()=>{setBusy(true);try{const r=await api('/cruds',{method:'POST',body:JSON.stringify({name:name.trim(),description:desc.trim(),color,columns:cols.map(c=>({name:c.name.trim(),data_type:c.data_type,is_required:c.is_required,validation_rule:c.validation_rule}))})});add('success',`"${name}" criada!`);onNav('view',r.id)}catch(e){add('error',e.message)}finally{setBusy(false)}};
 
   return <div className="max-w-3xl mx-auto animate-fade-in">
-    <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">&larr; Voltar</button>
-    <h1 className="text-2xl font-bold mb-2">Criar novo CRUD</h1>
-    <div className="flex items-center gap-2 mb-8">{[1,2,3].map(s=><div key={s} className="flex items-center gap-2"><div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${s===step?'accent-bg text-white':s<step?'bg-emerald-500 text-white':'bg-gray-200 text-gray-500'}`}>{s<step?'✓':s}</div><span className="text-sm hidden sm:inline">{s===1?'Info':s===2?'Colunas':'Revisar'}</span>{s<3&&<div className="w-8 h-px bg-gray-300"/>}</div>)}</div>
+    <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar</button>
+    <h1 className="text-2xl font-bold mb-2">Criar nova Tabela</h1>
+    <div className="flex items-center gap-2 mb-8">{[1,2,3].map(s=><div key={s} className="flex items-center gap-2"><div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${s===step?'accent-bg text-white':s<step?'bg-emerald-500 text-white':'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>{s<step?'✓':s}</div><span className="text-sm hidden sm:inline text-gray-500 dark:text-gray-400">{s===1?'Info':s===2?'Colunas':'Revisar'}</span>{s<3&&<div className="w-8 h-px bg-gray-300 dark:bg-gray-700"/>}</div>)}</div>
 
-    {step===1&&<div className="space-y-6 bg-white rounded-2xl border border-gray-200 p-6">
-      <div><label className="block text-sm font-medium mb-2">Nome *</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: Clientes, Produtos..." className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-300" autoFocus/></div>
-      <div><label className="block text-sm font-medium mb-2">Descricao</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder="Objetivo deste formulario..." className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"/></div>
+    {step===1&&<div className="space-y-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+      <div><label className="block text-sm font-medium mb-2">Nome da Tabela *</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: Clientes, Produtos, Pedidos..." className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300" autoFocus/></div>
+      <div><label className="block text-sm font-medium mb-2">Descricao</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder="Objetivo desta tabela..." className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"/></div>
       <div><label className="block text-sm font-medium mb-3">Cor</label><div className="flex flex-wrap gap-2">{COLORS.map(c=><button key={c} onClick={()=>setColor(c)} className={`w-9 h-9 rounded-xl transition-all ${color===c?'ring-2 ring-offset-2 ring-gray-400 scale-110':'hover:scale-105'}`} style={{backgroundColor:c}}/>)}</div></div>
     </div>}
 
-    {step===2&&<div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between"><h3 className="font-semibold">Colunas</h3><button onClick={addCol} className="flex items-center gap-1.5 px-3 py-1.5 accent-bg text-white rounded-lg text-sm font-medium">+ Adicionar</button></div>
-      <div className="divide-y divide-gray-100">{cols.map((col,i)=><div key={col.id} className="px-6 py-4 flex items-start gap-3">
-        <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3">
-          <div className="sm:col-span-5"><input value={col.name} onChange={e=>updCol(col.id,'name',e.target.value)} placeholder={`Coluna ${i+1}`} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
-          <div className="sm:col-span-4"><select value={col.data_type} onChange={e=>updCol(col.id,'data_type',e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select></div>
-          <div className="sm:col-span-2 flex items-center"><label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={col.is_required} onChange={e=>updCol(col.id,'is_required',e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label></div>
-          <div className="sm:col-span-1 flex items-center"><button onClick={()=>rmCol(col.id)} disabled={cols.length<=1} className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-400 hover:text-rose-600 disabled:opacity-30">&#128465;</button></div>
+    {step===2&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"><h3 className="font-semibold">Colunas</h3><button onClick={addCol} className="flex items-center gap-1.5 px-3 py-1.5 accent-bg text-white rounded-lg text-sm font-medium">+ Adicionar</button></div>
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">{cols.map((col,i)=><div key={col.id} className="px-6 py-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="sm:col-span-5"><input value={col.name} onChange={e=>updCol(col.id,'name',e.target.value)} placeholder={`Coluna ${i+1}`} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
+            <div className="sm:col-span-4"><select value={col.data_type} onChange={e=>updCol(col.id,'data_type',e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select></div>
+            <div className="sm:col-span-2 flex items-center"><label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={col.is_required} onChange={e=>updCol(col.id,'is_required',e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label></div>
+            <div className="sm:col-span-1 flex items-center"><button onClick={()=>rmCol(col.id)} disabled={cols.length<=1} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600 disabled:opacity-30">&#128465;</button></div>
+          </div>
+        </div>
+        {/* AI Validation Rule */}
+        <div className="ml-0 flex items-center gap-2">
+          <span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; Regra AI:</span>
+          <input value={col.validation_rule} onChange={e=>updCol(col.id,'validation_rule',e.target.value)} placeholder="Ex: deve ser um CPF valido, deve ter pelo menos 3 caracteres..." className="flex-1 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/>
         </div>
       </div>)}</div>
     </div>}
 
-    {step===3&&<div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
-      <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl" style={{backgroundColor:color}}>{name.substring(0,2).toUpperCase()}</div><div><h3 className="text-xl font-bold">{name}</h3>{desc&&<p className="text-gray-500 text-sm">{desc}</p>}</div></div>
-      <table className="w-full text-sm border border-gray-200 rounded-xl overflow-hidden"><thead className="bg-gray-50"><tr><th className="text-left px-4 py-2.5">#</th><th className="text-left px-4 py-2.5">Nome</th><th className="text-left px-4 py-2.5">Tipo</th><th className="text-left px-4 py-2.5">Obrig.</th></tr></thead><tbody className="divide-y divide-gray-100">{cols.map((c,i)=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<tr key={c.id}><td className="px-4 py-2.5 text-gray-400">{i+1}</td><td className="px-4 py-2.5 font-medium">{c.name}</td><td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dt?.color||''}`}>{dt?.label}</span></td><td className="px-4 py-2.5">{c.is_required?'Sim':'Nao'}</td></tr>})}</tbody></table>
+    {step===3&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-6">
+      <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl" style={{backgroundColor:color}}>{name.substring(0,2).toUpperCase()}</div><div><h3 className="text-xl font-bold">{name}</h3>{desc&&<p className="text-gray-500 dark:text-gray-400 text-sm">{desc}</p>}</div></div>
+      <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"><thead className="bg-gray-50 dark:bg-gray-800"><tr><th className="text-left px-4 py-2.5">#</th><th className="text-left px-4 py-2.5">Nome</th><th className="text-left px-4 py-2.5">Tipo</th><th className="text-left px-4 py-2.5">Regra AI</th></tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{cols.map((c,i)=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<tr key={c.id}><td className="px-4 py-2.5 text-gray-400">{i+1}</td><td className="px-4 py-2.5 font-medium">{c.name}{c.is_required&&<span className="text-rose-500 ml-1">*</span>}</td><td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dt?.color||''}`}>{dt?.label}</span></td><td className="px-4 py-2.5 text-gray-500 text-xs italic">{c.validation_rule||'—'}</td></tr>})}</tbody></table>
     </div>}
 
     <div className="flex justify-between mt-6">
-      <button onClick={()=>setStep(step-1)} disabled={step===1} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 disabled:opacity-30">&larr; Voltar</button>
+      <button onClick={()=>setStep(step-1)} disabled={step===1} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&larr; Voltar</button>
       {step<3?<button onClick={()=>setStep(step+1)} disabled={step===1?!name.trim():!cols.every(c=>c.name.trim())} className="px-5 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">Proximo &rarr;</button>
-      :<button onClick={submit} disabled={busy} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?'Criando...':'✓ Criar CRUD'}</button>}
+      :<button onClick={submit} disabled={busy} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?'Criando...':'✓ Criar Tabela'}</button>}
     </div>
   </div>
 }
 
-// ====== CRUD VIEW ======
+// ====== TABLE VIEW ======
 function CrudView({id,onNav}){
   const{add}=useToast();
   const[crud,setCrud]=useState(null);
@@ -212,8 +244,9 @@ function CrudView({id,onNav}){
   const[delId,setDelId]=useState(null);
   const[selected,setSelected]=useState(new Set());
   const[batchDel,setBatchDel]=useState(false);
+  const aiVal=useAIValidation();
 
-  useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error','CRUD nao encontrado'))},[id]);
+  useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error','Tabela nao encontrada'))},[id]);
   const loadData=useCallback(()=>{if(!crud)return;api(`/cruds/${id}/data?search=${encodeURIComponent(search)}&page=${page}&sort_by=${sortBy}&sort_dir=${sortDir}`).then(setData).catch(()=>add('error','Erro ao carregar'))},[crud,search,page,sortBy,sortDir]);
   useEffect(()=>{loadData()},[loadData]);
   useEffect(()=>{const t=setTimeout(()=>{setSearch(searchInput);setPage(1)},300);return()=>clearTimeout(t)},[searchInput]);
@@ -221,9 +254,9 @@ function CrudView({id,onNav}){
   const cols=crud?.columns||[];
   const rows=data?.data||[];
 
-  const startAdd=()=>{setAdding(true);setEditId(null);setForm({})};
-  const startEdit=row=>{setEditId(row._id);setAdding(false);const f={};cols.forEach(c=>{f[c.db_column]=row[c.db_column]!=null?String(row[c.db_column]):''});setForm(f)};
-  const cancel=()=>{setAdding(false);setEditId(null);setForm({})};
+  const startAdd=()=>{setAdding(true);setEditId(null);setForm({});aiVal.clear()};
+  const startEdit=row=>{setEditId(row._id);setAdding(false);const f={};cols.forEach(c=>{f[c.db_column]=row[c.db_column]!=null?String(row[c.db_column]):''});setForm(f);aiVal.clear()};
+  const cancel=()=>{setAdding(false);setEditId(null);setForm({});aiVal.clear()};
   const saveAdd=async()=>{try{await api(`/cruds/${id}/data`,{method:'POST',body:JSON.stringify({data:form})});add('success','Adicionado');cancel();loadData()}catch(e){add('error',e.message)}};
   const saveEdit=async()=>{try{await api(`/cruds/${id}/data/${editId}`,{method:'PUT',body:JSON.stringify({data:form})});add('success','Atualizado');cancel();loadData()}catch(e){add('error',e.message)}};
   const handleDel=async()=>{try{await api(`/cruds/${id}/data/${delId}`,{method:'DELETE'});add('success','Excluido');loadData()}catch{add('error','Erro')}setDelId(null)};
@@ -232,55 +265,71 @@ function CrudView({id,onNav}){
   const toggleSort=col=>{if(sortBy===col)setSortDir(d=>d==='asc'?'desc':'asc');else{setSortBy(col);setSortDir('asc')}};
   const toggleSel=rid=>{setSelected(prev=>{const n=new Set(prev);n.has(rid)?n.delete(rid):n.add(rid);return n})};
 
-  const renderInput=col=>{const v=form[col.db_column]||'';const onChange=val=>setForm({...form,[col.db_column]:val});
-    if(col.data_type==='boolean')return<select value={v} onChange={e=>onChange(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm"><option value="">--</option><option value="true">Sim</option><option value="false">Nao</option></select>;
-    const type=col.data_type==='date'?'date':col.data_type==='datetime'?'datetime-local':col.data_type==='integer'||col.data_type==='decimal'?'number':'text';
-    return<input type={type} step={col.data_type==='decimal'?'0.01':undefined} value={v} onChange={e=>onChange(e.target.value)} placeholder={col.name} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"/>};
+  // Handle field change + AI validation
+  const handleFieldChange=(col,val)=>{
+    setForm({...form,[col.db_column]:val});
+    if(col.validation_rule&&val){
+      // Debounce AI validation
+      clearTimeout(window['_aiv_'+col.db_column]);
+      window['_aiv_'+col.db_column]=setTimeout(()=>{
+        aiVal.validate(col.db_column,val,col.validation_rule,col.name);
+      },800);
+    }
+  };
+
+  const renderInput=col=>{const v=form[col.db_column]||'';
+    const input=(()=>{
+      if(col.data_type==='boolean')return<select value={v} onChange={e=>handleFieldChange(col,e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"><option value="">--</option><option value="true">Sim</option><option value="false">Nao</option></select>;
+      const type=col.data_type==='date'?'date':col.data_type==='datetime'?'datetime-local':col.data_type==='integer'||col.data_type==='decimal'?'number':'text';
+      return<input type={type} step={col.data_type==='decimal'?'0.01':undefined} value={v} onChange={e=>handleFieldChange(col,e.target.value)} placeholder={col.name} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"/>
+    })();
+    return <div>{input}{col.validation_rule&&<ValidationBadge result={aiVal.results[col.db_column]} loading={aiVal.loading[col.db_column]}/>}</div>;
+  };
 
   if(!crud)return<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>;
 
   return <div className="animate-fade-in space-y-4">
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <button onClick={()=>onNav('home')} className="text-gray-400 hover:text-gray-600 text-xl">&larr;</button>
+        <button onClick={()=>onNav('home')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&larr;</button>
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div>
-        <div><h1 className="text-2xl font-bold">{crud.name}</h1>{crud.description&&<p className="text-gray-500 text-sm">{crud.description}</p>}</div>
+        <div><h1 className="text-2xl font-bold">{crud.name}</h1>{crud.description&&<p className="text-gray-500 dark:text-gray-400 text-sm">{crud.description}</p>}</div>
       </div>
       <div className="flex items-center gap-2">
-        <button onClick={()=>onNav('import',id)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50">&#128462; Importar</button>
-        <button onClick={handleExport} className="px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50">&#11015; Exportar</button>
-        <button onClick={()=>onNav('edit',id)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50">&#9881; Editar</button>
+        <button onClick={()=>onNav('import',id)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">&#128462; Importar</button>
+        <button onClick={handleExport} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">&#11015; Exportar</button>
+        <button onClick={()=>onNav('edit',id)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">&#9881; Editar</button>
       </div>
     </div>
 
     <div className="flex items-center gap-3">
-      <div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span><input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder="Buscar em todos os campos..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
+      <div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span><input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder="Buscar em todos os campos..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
       <button onClick={startAdd} className="px-4 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">+ Adicionar</button>
       {selected.size>0&&<button onClick={()=>setBatchDel(true)} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-medium">&#128465; ({selected.size})</button>}
     </div>
 
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-      <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50"><tr>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+      <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-800"><tr>
         <th className="w-10 px-4 py-3"><input type="checkbox" checked={rows.length>0&&selected.size===rows.length} onChange={()=>{if(selected.size===rows.length)setSelected(new Set());else setSelected(new Set(rows.map(r=>r._id)))}}/></th>
-        {cols.map(c=><th key={c.id} className="text-left px-4 py-3 font-medium cursor-pointer select-none hover:bg-gray-100" onClick={()=>toggleSort(c.db_column)}><span className="flex items-center gap-1">{c.name}<span className={sortBy===c.db_column?'text-indigo-500':'text-gray-300'}>{sortDir==='asc'&&sortBy===c.db_column?'↑':'↓'}</span></span></th>)}
+        {cols.map(c=><th key={c.id} className="text-left px-4 py-3 font-medium cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700" onClick={()=>toggleSort(c.db_column)}><span className="flex items-center gap-1">{c.name}{c.validation_rule&&<span title={'Regra: '+c.validation_rule} className="text-indigo-400 text-xs">&#9889;</span>}<span className={sortBy===c.db_column?'text-indigo-500':'text-gray-300'}>{sortDir==='asc'&&sortBy===c.db_column?'↑':'↓'}</span></span></th>)}
         <th className="w-24 px-4 py-3 text-right font-medium">Acoes</th>
-      </tr></thead><tbody className="divide-y divide-gray-100">
-        {adding&&<tr className="bg-indigo-50/50"><td className="px-4 py-2"/>{cols.map(c=><td key={c.id} className="px-4 py-2">{renderInput(c)}</td>)}<td className="px-4 py-2 text-right"><button onClick={saveAdd} className="p-1.5 rounded-lg bg-emerald-600 text-white mr-1">✓</button><button onClick={cancel} className="p-1.5 rounded-lg hover:bg-gray-200">✕</button></td></tr>}
-        {rows.map(row=><tr key={row._id} className={`hover:bg-gray-50 ${selected.has(row._id)?'bg-indigo-50/30':''}`}>
+      </tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+        {adding&&<tr className="bg-indigo-50/50 dark:bg-indigo-950/20"><td className="px-4 py-2"/>{cols.map(c=><td key={c.id} className="px-4 py-2">{renderInput(c)}</td>)}<td className="px-4 py-2 text-right"><button onClick={saveAdd} className="p-1.5 rounded-lg bg-emerald-600 text-white mr-1">✓</button><button onClick={cancel} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">✕</button></td></tr>}
+        {rows.map(row=><tr key={row._id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${selected.has(row._id)?'bg-indigo-50/30 dark:bg-indigo-950/10':''}`}>
           <td className="px-4 py-2.5"><input type="checkbox" checked={selected.has(row._id)} onChange={()=>toggleSel(row._id)}/></td>
-          {cols.map(c=><td key={c.id} className="px-4 py-2.5">{editId===row._id?renderInput(c):c.data_type==='boolean'?<span className={`px-2 py-0.5 rounded-full text-xs font-medium ${row[c.db_column]?'bg-emerald-100 text-emerald-700':'bg-gray-100 text-gray-600'}`}>{row[c.db_column]?'Sim':'Nao'}</span>:<span className="truncate max-w-xs inline-block">{row[c.db_column]!=null?String(row[c.db_column]):'-'}</span>}</td>)}
-          <td className="px-4 py-2.5 text-right">{editId===row._id?<span><button onClick={saveEdit} className="p-1.5 rounded-lg bg-emerald-600 text-white mr-1">✓</button><button onClick={cancel} className="p-1.5 rounded-lg hover:bg-gray-200">✕</button></span>:<span><button onClick={()=>startEdit(row)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">&#9998;</button><button onClick={()=>setDelId(row._id)} className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-400 hover:text-rose-600">&#128465;</button></span>}</td>
+          {cols.map(c=><td key={c.id} className="px-4 py-2.5">{editId===row._id?renderInput(c):c.data_type==='boolean'?<span className={`px-2 py-0.5 rounded-full text-xs font-medium ${row[c.db_column]?'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400':'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>{row[c.db_column]?'Sim':'Nao'}</span>:<span className="truncate max-w-xs inline-block">{row[c.db_column]!=null?String(row[c.db_column]):'-'}</span>}</td>)}
+          <td className="px-4 py-2.5 text-right">{editId===row._id?<span><button onClick={saveEdit} className="p-1.5 rounded-lg bg-emerald-600 text-white mr-1">✓</button><button onClick={cancel} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">✕</button></span>:<span><button onClick={()=>startEdit(row)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">&#9998;</button><button onClick={()=>setDelId(row._id)} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600">&#128465;</button></span>}</td>
         </tr>)}
         {rows.length===0&&!adding&&<tr><td colSpan={cols.length+2} className="px-4 py-12 text-center text-gray-400">{search?'Nenhum resultado':'Nenhum registro. Clique em "Adicionar".'}</td></tr>}
       </tbody></table></div>
-      {data&&data.total_pages>1&&<div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between text-sm"><span className="text-gray-500">{data.total.toLocaleString('pt-BR')} registro(s)</span><div className="flex items-center gap-2"><button onClick={()=>setPage(p=>p-1)} disabled={page<=1} className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30">&laquo;</button><span>{page}/{data.total_pages}</span><button onClick={()=>setPage(p=>p+1)} disabled={page>=data.total_pages} className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30">&raquo;</button></div></div>}
+      {data&&data.total_pages>1&&<div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-sm"><span className="text-gray-500">{data.total.toLocaleString('pt-BR')} registro(s)</span><div className="flex items-center gap-2"><button onClick={()=>setPage(p=>p-1)} disabled={page<=1} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&laquo;</button><span>{page}/{data.total_pages}</span><button onClick={()=>setPage(p=>p+1)} disabled={page>=data.total_pages} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&raquo;</button></div></div>}
     </div>
     <Confirm open={delId!==null} title="Excluir registro" msg="Tem certeza?" danger onOk={handleDel} onCancel={()=>setDelId(null)}/>
     <Confirm open={batchDel} title="Excluir registros" msg={`Excluir ${selected.size} registro(s)?`} danger onOk={handleBatchDel} onCancel={()=>setBatchDel(false)}/>
   </div>
 }
 
-// ====== EDIT CRUD ======
+// ====== EDIT TABLE ======
 function EditCrud({id,onNav}){
   const{add}=useToast();
   const[crud,setCrud]=useState(null);
@@ -289,32 +338,56 @@ function EditCrud({id,onNav}){
   const[color,setColor]=useState('#6366f1');
   const[newCol,setNewCol]=useState('');
   const[newType,setNewType]=useState('text');
+  const[newRule,setNewRule]=useState('');
+  const[newReq,setNewReq]=useState(false);
   const[delCol,setDelCol]=useState(null);
 
-  const load=()=>api(`/cruds/${id}`).then(c=>{setCrud(c);setName(c.name);setDesc(c.description);setColor(c.color)}).catch(()=>add('error','Nao encontrado'));
+  const load=()=>api(`/cruds/${id}`).then(c=>{setCrud(c);setName(c.name);setDesc(c.description);setColor(c.color)}).catch(()=>add('error','Nao encontrada'));
   useEffect(()=>{load()},[id]);
 
-  const save=async()=>{try{await api(`/cruds/${id}`,{method:'PUT',body:JSON.stringify({name:name.trim(),description:desc.trim(),color})});add('success','Atualizado');onNav('view',id)}catch(e){add('error',e.message)}};
-  const addCol=async()=>{if(!newCol.trim())return;try{await api(`/cruds/${id}/columns`,{method:'POST',body:JSON.stringify({name:newCol.trim(),data_type:newType,is_required:false})});add('success',`Coluna "${newCol}" adicionada`);setNewCol('');load()}catch(e){add('error',e.message)}};
+  const save=async()=>{try{await api(`/cruds/${id}`,{method:'PUT',body:JSON.stringify({name:name.trim(),description:desc.trim(),color})});add('success','Tabela atualizada');onNav('view',id)}catch(e){add('error',e.message)}};
+  const addCol=async()=>{if(!newCol.trim())return;try{await api(`/cruds/${id}/columns`,{method:'POST',body:JSON.stringify({name:newCol.trim(),data_type:newType,is_required:newReq,validation_rule:newRule})});add('success',`Coluna "${newCol}" adicionada`);setNewCol('');setNewRule('');setNewReq(false);load()}catch(e){add('error',e.message)}};
   const rmCol=async()=>{if(!delCol)return;try{await api(`/cruds/${id}/columns/${delCol.id}`,{method:'DELETE'});add('success','Coluna removida');load()}catch(e){add('error',e.message)}setDelCol(null)};
+  const updateColRule=async(col,rule)=>{try{await api(`/cruds/${id}/columns/${col.id}`,{method:'PUT',body:JSON.stringify({validation_rule:rule})});add('success','Regra atualizada');load()}catch(e){add('error',e.message)}};
 
   if(!crud)return<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>;
 
   return <div className="max-w-3xl mx-auto animate-fade-in">
-    <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">&larr; Voltar</button>
-    <h1 className="text-2xl font-bold mb-6">Editar CRUD</h1>
-    <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5 mb-6">
-      <div><label className="block text-sm font-medium mb-2">Nome</label><input value={name} onChange={e=>setName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
-      <div><label className="block text-sm font-medium mb-2">Descricao</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"/></div>
+    <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar</button>
+    <h1 className="text-2xl font-bold mb-6">Editar Tabela</h1>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-5 mb-6">
+      <div><label className="block text-sm font-medium mb-2">Nome</label><input value={name} onChange={e=>setName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
+      <div><label className="block text-sm font-medium mb-2">Descricao</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"/></div>
       <div><label className="block text-sm font-medium mb-3">Cor</label><div className="flex flex-wrap gap-2">{COLORS.map(c=><button key={c} onClick={()=>setColor(c)} className={`w-9 h-9 rounded-xl transition-all ${color===c?'ring-2 ring-offset-2 ring-gray-400 scale-110':'hover:scale-105'}`} style={{backgroundColor:c}}/>)}</div></div>
       <button onClick={save} disabled={!name.trim()} className="px-5 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">&#128190; Salvar</button>
     </div>
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200"><h2 className="font-semibold text-lg">Colunas ({crud.columns.length})</h2></div>
-      <div className="divide-y divide-gray-100">{crud.columns.map(c=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<div key={c.id} className="px-6 py-3 flex items-center gap-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${dt?.color||''}`}>{dt?.label}</span><span className="flex-1 font-medium text-sm">{c.name}</span><span className="text-xs text-gray-400 font-mono">{c.db_column}</span><button onClick={()=>setDelCol(c)} className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-400 hover:text-rose-600">&#128465;</button></div>})}</div>
-      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50">
-        <h3 className="text-sm font-medium mb-3">Nova coluna</h3>
-        <div className="flex items-end gap-3"><input value={newCol} onChange={e=>setNewCol(e.target.value)} placeholder="Nome" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/><select value={newType} onChange={e=>setNewType(e.target.value)} className="w-36 px-3 py-2 rounded-lg border border-gray-200 text-sm">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select><button onClick={addCol} disabled={!newCol.trim()} className="px-4 py-2 accent-bg text-white rounded-lg text-sm font-medium disabled:opacity-50">+ Adicionar</button></div>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800"><h2 className="font-semibold text-lg">Colunas ({crud.columns.length})</h2></div>
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">{crud.columns.map(c=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<div key={c.id} className="px-6 py-3 space-y-2">
+        <div className="flex items-center gap-3">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${dt?.color||''}`}>{dt?.label}</span>
+          <span className="flex-1 font-medium text-sm">{c.name}</span>
+          <span className="text-xs text-gray-400 font-mono">{c.db_column}</span>
+          <button onClick={()=>setDelCol(c)} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600">&#128465;</button>
+        </div>
+        {/* Editable AI rule */}
+        <div className="flex items-center gap-2 ml-0">
+          <span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; Regra AI:</span>
+          <input defaultValue={c.validation_rule||''} onBlur={e=>{if(e.target.value!==(c.validation_rule||''))updateColRule(c,e.target.value)}} placeholder="Ex: deve ser um email valido..." className="flex-1 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300"/>
+        </div>
+      </div>})}</div>
+      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 space-y-3">
+        <h3 className="text-sm font-medium">Nova coluna</h3>
+        <div className="flex items-end gap-3 flex-wrap">
+          <input value={newCol} onChange={e=>setNewCol(e.target.value)} placeholder="Nome" className="flex-1 min-w-[150px] px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/>
+          <select value={newType} onChange={e=>setNewType(e.target.value)} className="w-32 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select>
+          <label className="flex items-center gap-2 text-sm shrink-0"><input type="checkbox" checked={newReq} onChange={e=>setNewReq(e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label>
+          <button onClick={addCol} disabled={!newCol.trim()} className="px-4 py-2 accent-bg text-white rounded-lg text-sm font-medium disabled:opacity-50 shrink-0">+ Adicionar</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; Regra AI:</span>
+          <input value={newRule} onChange={e=>setNewRule(e.target.value)} placeholder="Ex: deve conter apenas numeros..." className="flex-1 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"/>
+        </div>
       </div>
     </div>
     <Confirm open={!!delCol} title="Remover coluna" msg={`Remover "${delCol?.name}"? Dados preservados mas nao visiveis.`} danger onOk={rmCol} onCancel={()=>setDelCol(null)}/>
@@ -332,7 +405,7 @@ function ImportData({id,onNav}){
   const[step,setStep]=useState('upload');
   const[result,setResult]=useState(null);
 
-  useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error','Nao encontrado'))},[id]);
+  useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error','Nao encontrada'))},[id]);
 
   const processFile=file=>{if(!file.name.match(/\.xlsx?$/i)){add('error','Apenas .xlsx');return}
     const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const json=XLSX.utils.sheet_to_json(ws);if(!json.length){add('error','Vazio');return}const headers=Object.keys(json[0]);setExcel({fileName:file.name,headers,rows:json,sample:json.slice(0,5)});setStep('map');autoMap(headers)}catch{add('error','Erro ao ler')}};reader.readAsArrayBuffer(file)};
@@ -346,49 +419,45 @@ function ImportData({id,onNav}){
   if(!crud)return<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>;
 
   return <div className="max-w-4xl mx-auto animate-fade-in">
-    <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">&larr; Voltar para {crud.name}</button>
-    <div className="flex items-center gap-4 mb-6"><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div><div><h1 className="text-2xl font-bold">Importar dados</h1><p className="text-gray-500 text-sm">Planilha Excel para "{crud.name}"</p></div></div>
+    <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar para {crud.name}</button>
+    <div className="flex items-center gap-4 mb-6"><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div><div><h1 className="text-2xl font-bold">Importar dados</h1><p className="text-gray-500 dark:text-gray-400 text-sm">Planilha Excel para "{crud.name}"</p></div></div>
 
-    {step==='upload'&&<div onDragOver={e=>{e.preventDefault()}} onDrop={e=>{e.preventDefault();processFile(e.dataTransfer.files[0])}} className="border-2 border-dashed rounded-2xl p-12 text-center border-gray-300 hover:border-gray-400">
-      <div className="text-6xl mb-4">&#128462;</div><h3 className="text-lg font-semibold mb-2">Arraste seu arquivo Excel aqui</h3><p className="text-gray-500 mb-6">ou clique para selecionar</p>
+    {step==='upload'&&<div onDragOver={e=>{e.preventDefault()}} onDrop={e=>{e.preventDefault();processFile(e.dataTransfer.files[0])}} className="border-2 border-dashed rounded-2xl p-12 text-center border-gray-300 dark:border-gray-700 hover:border-gray-400">
+      <div className="text-6xl mb-4">&#128462;</div><h3 className="text-lg font-semibold mb-2">Arraste seu arquivo Excel aqui</h3><p className="text-gray-500 dark:text-gray-400 mb-6">ou clique para selecionar</p>
       <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={e=>e.target.files[0]&&processFile(e.target.files[0])} className="hidden"/>
       <button onClick={()=>fileRef.current.click()} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium hover:opacity-90">&#11014; Selecionar arquivo</button>
     </div>}
 
     {step==='map'&&excel&&<div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between">
         <div><span className="text-2xl mr-3">&#128462;</span><strong>{excel.fileName}</strong> — {excel.rows.length.toLocaleString('pt-BR')} linhas, {excel.headers.length} colunas</div>
-        <button onClick={()=>{setStep('upload');setExcel(null);setMapping({})}} className="p-2 rounded-lg hover:bg-gray-100">&#10005;</button>
+        <button onClick={()=>{setStep('upload');setExcel(null);setMapping({})}} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">&#10005;</button>
       </div>
-
-      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Mapeamento de colunas</h2><button onClick={()=>autoMap(excel.headers)} className="px-3 py-1.5 text-sm font-medium accent-text hover:bg-indigo-50 rounded-lg">&#9889; Auto-mapear</button></div>
-
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="grid grid-cols-12 px-6 py-3 bg-gray-50 text-sm font-medium"><div className="col-span-5">Coluna do CRUD</div><div className="col-span-2 text-center">&rarr;</div><div className="col-span-5">Coluna do Excel</div></div>
-        <div className="divide-y divide-gray-100">{crud.columns.map(c=><div key={c.id} className="grid grid-cols-12 items-center px-6 py-3 gap-2">
-          <div className="col-span-5 flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{backgroundColor:crud.color}}/><span className="font-medium text-sm">{c.name}</span><span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{c.data_type}</span>{c.is_required&&<span className="text-xs text-rose-500">*</span>}</div>
-          <div className="col-span-2 flex justify-center"><div className={`w-8 h-px ${mapping[c.db_column]?'bg-emerald-400':'bg-gray-300'}`}/>{mapping[c.db_column]&&<span className="text-emerald-500 -ml-1">✓</span>}</div>
-          <div className="col-span-5"><select value={mapping[c.db_column]||''} onChange={e=>setMapping({...mapping,[c.db_column]:e.target.value})} className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 ${mapping[c.db_column]?'border-emerald-300 bg-emerald-50':'border-gray-200'}`}><option value="">-- Selecione --</option>{excel.headers.map(h=><option key={h} value={h}>{h}</option>)}</select></div>
+      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Mapeamento de colunas</h2><button onClick={()=>autoMap(excel.headers)} className="px-3 py-1.5 text-sm font-medium accent-text hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg">&#9889; Auto-mapear</button></div>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="grid grid-cols-12 px-6 py-3 bg-gray-50 dark:bg-gray-800 text-sm font-medium"><div className="col-span-5">Coluna da Tabela</div><div className="col-span-2 text-center">&rarr;</div><div className="col-span-5">Coluna do Excel</div></div>
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">{crud.columns.map(c=><div key={c.id} className="grid grid-cols-12 items-center px-6 py-3 gap-2">
+          <div className="col-span-5 flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{backgroundColor:crud.color}}/><span className="font-medium text-sm">{c.name}</span><span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{c.data_type}</span>{c.is_required&&<span className="text-xs text-rose-500">*</span>}</div>
+          <div className="col-span-2 flex justify-center"><div className={`w-8 h-px ${mapping[c.db_column]?'bg-emerald-400':'bg-gray-300 dark:bg-gray-700'}`}/>{mapping[c.db_column]&&<span className="text-emerald-500 -ml-1">✓</span>}</div>
+          <div className="col-span-5"><select value={mapping[c.db_column]||''} onChange={e=>setMapping({...mapping,[c.db_column]:e.target.value})} className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 ${mapping[c.db_column]?'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20':'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}><option value="">-- Selecione --</option>{excel.headers.map(h=><option key={h} value={h}>{h}</option>)}</select></div>
         </div>)}</div>
       </div>
-
-      {mapped>0&&<div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-3 border-b border-gray-200 flex items-center justify-between"><h3 className="font-medium text-sm">Pre-visualizacao (5 linhas)</h3><span className="text-xs text-gray-400">{mapped}/{crud.columns.length} mapeadas</span></div>
-        <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50"><tr>{crud.columns.filter(c=>mapping[c.db_column]).map(c=><th key={c.id} className="text-left px-4 py-2 font-medium">{c.name}</th>)}</tr></thead><tbody className="divide-y divide-gray-100">{excel.sample.map((r,i)=><tr key={i}>{crud.columns.filter(c=>mapping[c.db_column]).map(c=><td key={c.id} className="px-4 py-2 truncate max-w-xs">{r[mapping[c.db_column]]!=null?String(r[mapping[c.db_column]]):'-'}</td>)}</tr>)}</tbody></table></div>
+      {mapped>0&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"><h3 className="font-medium text-sm">Pre-visualizacao (5 linhas)</h3><span className="text-xs text-gray-400">{mapped}/{crud.columns.length} mapeadas</span></div>
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-800"><tr>{crud.columns.filter(c=>mapping[c.db_column]).map(c=><th key={c.id} className="text-left px-4 py-2 font-medium">{c.name}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{excel.sample.map((r,i)=><tr key={i}>{crud.columns.filter(c=>mapping[c.db_column]).map(c=><td key={c.id} className="px-4 py-2 truncate max-w-xs">{r[mapping[c.db_column]]!=null?String(r[mapping[c.db_column]]):'-'}</td>)}</tr>)}</tbody></table></div>
       </div>}
-
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500">{mapped===0&&<span className="text-amber-600">⚠ Mapeie pelo menos uma coluna</span>}</div>
+        <div className="text-sm text-gray-500">{mapped===0&&<span className="text-amber-600">&#9888; Mapeie pelo menos uma coluna</span>}</div>
         <button onClick={doImport} disabled={mapped===0||busy} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?'Importando...':'&#11014; Importar '+excel.rows.length.toLocaleString('pt-BR')+' linhas'}</button>
       </div>
     </div>}
 
-    {step==='done'&&result&&<div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+    {step==='done'&&result&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center">
       <div className="text-5xl mb-4">&#9989;</div>
       <h2 className="text-xl font-bold mb-2">Importacao concluida!</h2>
-      <p className="text-gray-500 mb-6">{result.inserted.toLocaleString('pt-BR')} importados{result.errors>0&&<span className="text-rose-500"> ({result.errors} erros)</span>}</p>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">{result.inserted.toLocaleString('pt-BR')} importados{result.errors>0&&<span className="text-rose-500"> ({result.errors} erros)</span>}</p>
       <div className="flex items-center justify-center gap-3">
-        <button onClick={()=>{setStep('upload');setExcel(null);setMapping({});setResult(null)}} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50">Importar mais</button>
+        <button onClick={()=>{setStep('upload');setExcel(null);setMapping({});setResult(null)}} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">Importar mais</button>
         <button onClick={()=>onNav('view',id)} className="px-4 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">Ver dados</button>
       </div>
     </div>}
@@ -405,16 +474,16 @@ function Settings({onNav}){
   const applyAccent=c=>{const h=c.replace('#','');const[r,g,b]=[parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];document.documentElement.style.setProperty('--accent',`${r} ${g} ${b}`);localStorage.setItem('dbx-accent',c);setAccent(c)};
 
   return <div className="max-w-2xl mx-auto animate-fade-in">
-    <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">&larr; Voltar</button>
-    <h1 className="text-2xl font-bold mb-2">Configuracoes</h1><p className="text-gray-500 mb-8">Personalize o visual</p>
+    <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar</button>
+    <h1 className="text-2xl font-bold mb-2">Configuracoes</h1><p className="text-gray-500 dark:text-gray-400 mb-8">Personalize o visual</p>
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
       <h2 className="font-semibold text-lg mb-4">Tema</h2>
       <div className="grid grid-cols-2 gap-3">{[{t:'light',l:'Claro',icon:'☀️'},{t:'dark',l:'Escuro',icon:'🌙'}].map(o=><button key={o.t} onClick={()=>applyTheme(o.t)} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 ${theme===o.t?'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30':'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}><span className="text-3xl">{o.icon}</span><span className="font-medium text-sm">{o.l}</span></button>)}</div>
     </div>
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
       <h2 className="font-semibold text-lg mb-4">Cor de destaque</h2>
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">{ACCENTS.map(c=><button key={c.v} onClick={()=>applyAccent(c.v)} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${accent===c.v?'ring-2 ring-offset-2 ring-gray-400 scale-105':'hover:bg-gray-50'}`}><div className="w-10 h-10 rounded-xl shadow-sm" style={{backgroundColor:c.v}}/><span className="text-xs text-gray-500">{c.n}</span></button>)}</div>
-      <div className="mt-6 p-4 rounded-xl border border-gray-200 bg-gray-50"><h3 className="text-sm font-medium mb-3 text-gray-500">Preview</h3><div className="flex items-center gap-3"><button className="px-4 py-2 accent-bg text-white rounded-xl text-sm font-medium">Primario</button><button className="px-4 py-2 accent-bg-light accent-text rounded-xl text-sm font-medium">Secundario</button><div className="w-3 h-3 rounded-full accent-bg"/><span className="accent-text text-sm font-medium">Link</span></div></div>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">{ACCENTS.map(c=><button key={c.v} onClick={()=>applyAccent(c.v)} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${accent===c.v?'ring-2 ring-offset-2 ring-gray-400 dark:ring-offset-gray-900 scale-105':'hover:bg-gray-50 dark:hover:bg-gray-800'}`}><div className="w-10 h-10 rounded-xl shadow-sm" style={{backgroundColor:c.v}}/><span className="text-xs text-gray-500 dark:text-gray-400">{c.n}</span></button>)}</div>
+      <div className="mt-6 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"><h3 className="text-sm font-medium mb-3 text-gray-500">Preview</h3><div className="flex items-center gap-3"><button className="px-4 py-2 accent-bg text-white rounded-xl text-sm font-medium">Primario</button><button className="px-4 py-2 accent-bg-light accent-text rounded-xl text-sm font-medium">Secundario</button><div className="w-3 h-3 rounded-full accent-bg"/><span className="accent-text text-sm font-medium">Link</span></div></div>
     </div>
   </div>
 }
@@ -423,18 +492,25 @@ function Settings({onNav}){
 function App(){
   const[page,setPage]=useState('home');
   const[pageId,setPageId]=useState(null);
-
   const onNav=(p,id=null)=>{setPage(p);setPageId(id);window.scrollTo(0,0)};
+
+  // Apply saved theme on mount
+  useEffect(()=>{
+    const t=localStorage.getItem('dbx-theme')||'light';
+    document.documentElement.classList.toggle('dark',t==='dark');
+    document.body.className=t==='dark'?'bg-gray-950 text-gray-100':'bg-gray-50 text-gray-900';
+    const a=localStorage.getItem('dbx-accent');
+    if(a){const h=a.replace('#','');const[r,g,b]=[parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];document.documentElement.style.setProperty('--accent',`${r} ${g} ${b}`)}
+  },[]);
 
   return <ToastProvider>
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
       <aside className="hidden lg:flex w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col shrink-0">
         <div className="h-16 flex items-center px-5 border-b border-gray-200 dark:border-gray-800">
           <span className="text-xl font-bold tracking-tight">&#128202; DBX <span className="accent-text">CRUDs</span></span>
         </div>
         <nav className="flex-1 py-4 px-3 space-y-1">
-          {[{p:'home',l:'Painel',i:'&#127968;'},{p:'create',l:'Novo CRUD',i:'&#10133;'},{p:'settings',l:'Configuracoes',i:'&#9881;'}].map(n=>
+          {[{p:'home',l:'Painel',i:'&#127968;'},{p:'create',l:'Nova Tabela',i:'&#10133;'},{p:'settings',l:'Configuracoes',i:'&#9881;'}].map(n=>
             <button key={n.p} onClick={()=>onNav(n.p)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${page===n.p?'accent-bg text-white shadow-md':'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
               <span dangerouslySetInnerHTML={{__html:n.i}}/>{n.l}
             </button>
@@ -442,16 +518,13 @@ function App(){
         </nav>
         <div className="p-4 border-t border-gray-200 dark:border-gray-800 text-xs text-gray-400">Powered by Databricks Lakebase</div>
       </aside>
-
-      {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Mobile header */}
         <header className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-gray-800 lg:hidden">
           <span className="font-semibold text-lg">&#128202; DBX CRUDs</span>
           <div className="ml-auto flex gap-2">
-            <button onClick={()=>onNav('home')} className="px-2 py-1 rounded text-sm hover:bg-gray-100">Painel</button>
-            <button onClick={()=>onNav('create')} className="px-2 py-1 rounded text-sm hover:bg-gray-100">+Novo</button>
-            <button onClick={()=>onNav('settings')} className="px-2 py-1 rounded text-sm hover:bg-gray-100">&#9881;</button>
+            <button onClick={()=>onNav('home')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Painel</button>
+            <button onClick={()=>onNav('create')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">+Nova</button>
+            <button onClick={()=>onNav('settings')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">&#9881;</button>
           </div>
         </header>
         <main className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">

@@ -5,6 +5,7 @@ class ColumnCreate(BaseModel):
     name: str
     data_type: str = "text"
     is_required: bool = False
+    validation_rule: str = ""
 
 
 class CrudCreate(BaseModel):
@@ -25,10 +26,18 @@ class ColumnAdd(BaseModel):
     name: str
     data_type: str = "text"
     is_required: bool = False
+    validation_rule: str = ""
 
 
 class ColumnUpdate(BaseModel):
     name: str | None = None
+    validation_rule: str | None = None
+
+
+class ValidateRequest(BaseModel):
+    value: str
+    rule: str
+    field_name: str = ""
 
 
 class RowCreate(BaseModel):

@@ -69,10 +69,15 @@ def init_schema():
                     db_column VARCHAR(255) NOT NULL,
                     data_type VARCHAR(50) NOT NULL DEFAULT 'text',
                     is_required BOOLEAN DEFAULT FALSE,
+                    validation_rule TEXT DEFAULT '',
                     position INTEGER NOT NULL DEFAULT 0,
                     is_deleted BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            """)
+            # Migration: add validation_rule if missing on existing tables
+            cur.execute("""
+                ALTER TABLE crud_columns ADD COLUMN IF NOT EXISTS validation_rule TEXT DEFAULT ''
             """)
         conn.commit()
 

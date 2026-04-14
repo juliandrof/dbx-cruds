@@ -62,6 +62,7 @@ def create_crud(body: CrudCreate):
             "db_column": db_col,
             "data_type": col.data_type,
             "is_required": col.is_required,
+            "validation_rule": col.validation_rule,
             "position": i,
         })
 
@@ -88,9 +89,9 @@ def create_crud(body: CrudCreate):
 
             for cm in columns_meta:
                 cur.execute(
-                    """INSERT INTO crud_columns (crud_id, name, db_column, data_type, is_required, position)
-                       VALUES (%s, %s, %s, %s, %s, %s)""",
-                    (crud_id, cm["name"], cm["db_column"], cm["data_type"], cm["is_required"], cm["position"]),
+                    """INSERT INTO crud_columns (crud_id, name, db_column, data_type, is_required, validation_rule, position)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                    (crud_id, cm["name"], cm["db_column"], cm["data_type"], cm["is_required"], cm["validation_rule"], cm["position"]),
                 )
         conn.commit()
 
@@ -113,7 +114,7 @@ def get_crud(crud_id: int):
                 raise HTTPException(404, "CRUD não encontrado")
 
             cur.execute(
-                """SELECT id, name, db_column, data_type, is_required, position
+                """SELECT id, name, db_column, data_type, is_required, position, COALESCE(validation_rule, '')
                    FROM crud_columns
                    WHERE crud_id = %s AND is_deleted = FALSE
                    ORDER BY position""",
@@ -127,6 +128,7 @@ def get_crud(crud_id: int):
                     "data_type": r[3],
                     "is_required": r[4],
                     "position": r[5],
+                    "validation_rule": r[6],
                 }
                 for r in cur.fetchall()
             ]
@@ -225,9 +227,9 @@ def add_column(crud_id: int, body: ColumnAdd):
             next_pos = cur.fetchone()[0]
 
             cur.execute(
-                """INSERT INTO crud_columns (crud_id, name, db_column, data_type, is_required, position)
-                   VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
-                (crud_id, body.name, db_col, body.data_type, body.is_required, next_pos),
+                """INSERT INTO crud_columns (crud_id, name, db_column, data_type, is_required, validation_rule, position)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+                (crud_id, body.name, db_col, body.data_type, body.is_required, body.validation_rule, next_pos),
             )
             col_id = cur.fetchone()[0]
 
@@ -245,13 +247,23 @@ def add_column(crud_id: int, body: ColumnAdd):
 def update_column(crud_id: int, col_id: int, body: ColumnUpdate):
     with pool.connection() as conn:
         with conn.cursor() as cur:
+            updates = []
+            params = []
             if body.name is not None:
-                cur.execute(
-                    "UPDATE crud_columns SET name = %s WHERE id = %s AND crud_id = %s AND is_deleted = FALSE",
-                    (body.name, col_id, crud_id),
-                )
-                if cur.rowcount == 0:
-                    raise HTTPException(404, "Coluna não encontrada")
+                updates.append("name = %s")
+                params.append(body.name)
+            if body.validation_rule is not None:
+                updates.append("validation_rule = %s")
+                params.append(body.validation_rule)
+            if not updates:
+                raise HTTPException(400, "Nada para atualizar")
+            params.extend([col_id, crud_id])
+            cur.execute(
+                f"UPDATE crud_columns SET {', '.join(updates)} WHERE id = %s AND crud_id = %s AND is_deleted = FALSE",
+                params,
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(404, "Coluna não encontrada")
             cur.execute(
                 "UPDATE crud_definitions SET updated_at = CURRENT_TIMESTAMP WHERE id = %s",
                 (crud_id,),
