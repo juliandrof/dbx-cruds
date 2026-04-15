@@ -5,6 +5,7 @@ class ColumnCreate(BaseModel):
     name: str
     data_type: str = "text"
     is_required: bool = False
+    is_unique: bool = False
     validation_rule: str = ""
 
 
@@ -26,6 +27,7 @@ class ColumnAdd(BaseModel):
     name: str
     data_type: str = "text"
     is_required: bool = False
+    is_unique: bool = False
     validation_rule: str = ""
 
 
@@ -52,3 +54,9 @@ class RowUpdate(BaseModel):
 class ImportData(BaseModel):
     mapping: dict[str, str]  # crud_column_db_name -> excel_column_name
     rows: list[dict]
+
+
+class ImportValidate(BaseModel):
+    mapping: dict[str, str]
+    rows: list[dict]
+    model: str = ""

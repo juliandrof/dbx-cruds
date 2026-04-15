@@ -16,11 +16,12 @@ def _get_crud_meta(cur, crud_id: int):
     table_name = row[0]
 
     cur.execute(
-        """SELECT db_column, name, data_type, is_required FROM crud_columns
+        """SELECT db_column, name, data_type, is_required, COALESCE(is_unique, FALSE), COALESCE(validation_rule, '')
+           FROM crud_columns
            WHERE crud_id = %s AND is_deleted = FALSE ORDER BY position""",
         (crud_id,),
     )
-    columns = [{"db_column": r[0], "name": r[1], "data_type": r[2], "is_required": r[3]} for r in cur.fetchall()]
+    columns = [{"db_column": r[0], "name": r[1], "data_type": r[2], "is_required": r[3], "is_unique": r[4], "validation_rule": r[5]} for r in cur.fetchall()]
     return table_name, columns
 
 
@@ -119,7 +120,19 @@ def create_row(crud_id: int, body: RowCreate):
             # Check required
             for col in columns:
                 if col["is_required"] and col["db_column"] not in body.data:
-                    raise HTTPException(400, f"Campo obrigatório: {col['name']}")
+                    raise HTTPException(400, f"Campo obrigatorio: {col['name']}")
+
+            # Check unique keys
+            for col in columns:
+                if col["is_unique"] and col["db_column"] in body.data:
+                    val = body.data[col["db_column"]]
+                    if val is not None and str(val).strip():
+                        cur.execute(
+                            f'SELECT COUNT(*) FROM "{table_name}" WHERE "{col["db_column"]}" = %s AND _is_deleted = FALSE',
+                            (_cast_value(val, col["data_type"]),),
+                        )
+                        if cur.fetchone()[0] > 0:
+                            raise HTTPException(400, f"Valor duplicado em '{col['name']}': {val}")
 
             if not insert_cols:
                 raise HTTPException(400, "Nenhum dado fornecido")

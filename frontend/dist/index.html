@@ -179,14 +179,14 @@ function CreateCrud({onNav}){
   const[name,setName]=useState('');
   const[desc,setDesc]=useState('');
   const[color,setColor]=useState('#6366f1');
-  const[cols,setCols]=useState([{id:'1',name:'',data_type:'text',is_required:false,validation_rule:''}]);
+  const[cols,setCols]=useState([{id:'1',name:'',data_type:'text',is_required:false,is_unique:false,validation_rule:''}]);
   const[busy,setBusy]=useState(false);
 
-  const addCol=()=>setCols([...cols,{id:Date.now().toString(),name:'',data_type:'text',is_required:false,validation_rule:''}]);
+  const addCol=()=>setCols([...cols,{id:Date.now().toString(),name:'',data_type:'text',is_required:false,is_unique:false,validation_rule:''}]);
   const rmCol=id=>{if(cols.length>1)setCols(cols.filter(c=>c.id!==id))};
   const updCol=(id,f,v)=>setCols(cols.map(c=>c.id===id?{...c,[f]:v}:c));
 
-  const submit=async()=>{setBusy(true);try{const r=await api('/cruds',{method:'POST',body:JSON.stringify({name:name.trim(),description:desc.trim(),color,columns:cols.map(c=>({name:c.name.trim(),data_type:c.data_type,is_required:c.is_required,validation_rule:c.validation_rule}))})});add('success',`"${name}" criada!`);onNav('view',r.id)}catch(e){add('error',e.message)}finally{setBusy(false)}};
+  const submit=async()=>{setBusy(true);try{const r=await api('/cruds',{method:'POST',body:JSON.stringify({name:name.trim(),description:desc.trim(),color,columns:cols.map(c=>({name:c.name.trim(),data_type:c.data_type,is_required:c.is_required,is_unique:c.is_unique,validation_rule:c.validation_rule}))})});add('success',`"${name}" criada!`);onNav('view',r.id)}catch(e){add('error',e.message)}finally{setBusy(false)}};
 
   return <div className="max-w-3xl mx-auto animate-fade-in">
     <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar</button>
@@ -206,8 +206,7 @@ function CreateCrud({onNav}){
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3">
             <div className="sm:col-span-5"><input value={col.name} onChange={e=>updCol(col.id,'name',e.target.value)} placeholder={`Coluna ${i+1}`} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
             <div className="sm:col-span-4"><select value={col.data_type} onChange={e=>updCol(col.id,'data_type',e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select></div>
-            <div className="sm:col-span-2 flex items-center"><label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={col.is_required} onChange={e=>updCol(col.id,'is_required',e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label></div>
-            <div className="sm:col-span-1 flex items-center"><button onClick={()=>rmCol(col.id)} disabled={cols.length<=1} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600 disabled:opacity-30">&#128465;</button></div>
+            <div className="sm:col-span-3 flex items-center gap-3"><label className="flex items-center gap-1 text-sm cursor-pointer"><input type="checkbox" checked={col.is_required} onChange={e=>updCol(col.id,'is_required',e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label><label className="flex items-center gap-1 text-sm cursor-pointer" title="Chave unica - nao permite valores duplicados"><input type="checkbox" checked={col.is_unique} onChange={e=>updCol(col.id,'is_unique',e.target.checked)} className="w-4 h-4 rounded accent-bg"/>Unica</label><button onClick={()=>rmCol(col.id)} disabled={cols.length<=1} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600 disabled:opacity-30 ml-auto">&#128465;</button></div>
           </div>
         </div>
         {/* AI Validation Rule */}
@@ -220,7 +219,7 @@ function CreateCrud({onNav}){
 
     {step===3&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-6">
       <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl" style={{backgroundColor:color}}>{name.substring(0,2).toUpperCase()}</div><div><h3 className="text-xl font-bold">{name}</h3>{desc&&<p className="text-gray-500 dark:text-gray-400 text-sm">{desc}</p>}</div></div>
-      <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"><thead className="bg-gray-50 dark:bg-gray-800"><tr><th className="text-left px-4 py-2.5">#</th><th className="text-left px-4 py-2.5">Nome</th><th className="text-left px-4 py-2.5">Tipo</th><th className="text-left px-4 py-2.5">Regra AI</th></tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{cols.map((c,i)=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<tr key={c.id}><td className="px-4 py-2.5 text-gray-400">{i+1}</td><td className="px-4 py-2.5 font-medium">{c.name}{c.is_required&&<span className="text-rose-500 ml-1">*</span>}</td><td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dt?.color||''}`}>{dt?.label}</span></td><td className="px-4 py-2.5 text-gray-500 text-xs italic">{c.validation_rule||'—'}</td></tr>})}</tbody></table>
+      <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"><thead className="bg-gray-50 dark:bg-gray-800"><tr><th className="text-left px-4 py-2.5">#</th><th className="text-left px-4 py-2.5">Nome</th><th className="text-left px-4 py-2.5">Tipo</th><th className="text-left px-4 py-2.5">Regra AI</th></tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{cols.map((c,i)=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<tr key={c.id}><td className="px-4 py-2.5 text-gray-400">{i+1}</td><td className="px-4 py-2.5 font-medium">{c.name}{c.is_required&&<span className="text-rose-500 ml-1">*</span>}{c.is_unique&&<span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">UK</span>}</td><td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dt?.color||''}`}>{dt?.label}</span></td><td className="px-4 py-2.5 text-gray-500 text-xs italic">{c.validation_rule||'—'}</td></tr>})}</tbody></table>
     </div>}
 
     <div className="flex justify-between mt-6">
@@ -343,13 +342,14 @@ function EditCrud({id,onNav}){
   const[newType,setNewType]=useState('text');
   const[newRule,setNewRule]=useState('');
   const[newReq,setNewReq]=useState(false);
+  const[newUniq,setNewUniq]=useState(false);
   const[delCol,setDelCol]=useState(null);
 
   const load=()=>api(`/cruds/${id}`).then(c=>{setCrud(c);setName(c.name);setDesc(c.description);setColor(c.color)}).catch(()=>add('error','Nao encontrada'));
   useEffect(()=>{load()},[id]);
 
   const save=async()=>{try{await api(`/cruds/${id}`,{method:'PUT',body:JSON.stringify({name:name.trim(),description:desc.trim(),color})});add('success','Tabela atualizada');onNav('view',id)}catch(e){add('error',e.message)}};
-  const addCol=async()=>{if(!newCol.trim())return;try{await api(`/cruds/${id}/columns`,{method:'POST',body:JSON.stringify({name:newCol.trim(),data_type:newType,is_required:newReq,validation_rule:newRule})});add('success',`Coluna "${newCol}" adicionada`);setNewCol('');setNewRule('');setNewReq(false);load()}catch(e){add('error',e.message)}};
+  const addCol=async()=>{if(!newCol.trim())return;try{await api(`/cruds/${id}/columns`,{method:'POST',body:JSON.stringify({name:newCol.trim(),data_type:newType,is_required:newReq,is_unique:newUniq,validation_rule:newRule})});add('success',`Coluna "${newCol}" adicionada`);setNewCol('');setNewRule('');setNewReq(false);setNewUniq(false);load()}catch(e){add('error',e.message)}};
   const rmCol=async()=>{if(!delCol)return;try{await api(`/cruds/${id}/columns/${delCol.id}`,{method:'DELETE'});add('success','Coluna removida');load()}catch(e){add('error',e.message)}setDelCol(null)};
   const updateColRule=async(col,rule)=>{try{await api(`/cruds/${id}/columns/${col.id}`,{method:'PUT',body:JSON.stringify({validation_rule:rule})});add('success','Regra atualizada');load()}catch(e){add('error',e.message)}};
 
@@ -369,7 +369,7 @@ function EditCrud({id,onNav}){
       <div className="divide-y divide-gray-100 dark:divide-gray-800">{crud.columns.map(c=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<div key={c.id} className="px-6 py-3 space-y-2">
         <div className="flex items-center gap-3">
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${dt?.color||''}`}>{dt?.label}</span>
-          <span className="flex-1 font-medium text-sm">{c.name}</span>
+          <span className="flex-1 font-medium text-sm">{c.name}{c.is_unique&&<span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">UK</span>}</span>
           <span className="text-xs text-gray-400 font-mono">{c.db_column}</span>
           <button onClick={()=>setDelCol(c)} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600">&#128465;</button>
         </div>
@@ -384,7 +384,8 @@ function EditCrud({id,onNav}){
         <div className="flex items-end gap-3 flex-wrap">
           <input value={newCol} onChange={e=>setNewCol(e.target.value)} placeholder="Nome" className="flex-1 min-w-[150px] px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/>
           <select value={newType} onChange={e=>setNewType(e.target.value)} className="w-32 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select>
-          <label className="flex items-center gap-2 text-sm shrink-0"><input type="checkbox" checked={newReq} onChange={e=>setNewReq(e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label>
+          <label className="flex items-center gap-1 text-sm shrink-0"><input type="checkbox" checked={newReq} onChange={e=>setNewReq(e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label>
+          <label className="flex items-center gap-1 text-sm shrink-0"><input type="checkbox" checked={newUniq} onChange={e=>setNewUniq(e.target.checked)} className="w-4 h-4 rounded"/>Unica</label>
           <button onClick={addCol} disabled={!newCol.trim()} className="px-4 py-2 accent-bg text-white rounded-lg text-sm font-medium disabled:opacity-50 shrink-0">+ Adicionar</button>
         </div>
         <div className="flex items-center gap-2">
@@ -397,70 +398,168 @@ function EditCrud({id,onNav}){
   </div>
 }
 
+// ====== CSV PARSER (auto-detect separator + line break) ======
+function parseCSV(text){
+  // Detect separator: try ;  ,  |  \t - pick the one that gives most consistent column count
+  const separators=[';',',','|','\t'];
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length)return{headers:[],rows:[]};
+  let bestSep=',',bestScore=0;
+  for(const sep of separators){
+    const counts=lines.slice(0,5).map(l=>l.split(sep).length);
+    const consistent=counts.every(c=>c===counts[0])&&counts[0]>1;
+    const score=consistent?counts[0]*10:counts[0];
+    if(score>bestScore){bestScore=score;bestSep=sep}
+  }
+  const headers=lines[0].split(bestSep).map(h=>h.trim().replace(/^["']|["']$/g,''));
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const vals=lines[i].split(bestSep).map(v=>v.trim().replace(/^["']|["']$/g,''));
+    const row={};headers.forEach((h,j)=>{row[h]=vals[j]||''});
+    rows.push(row);
+  }
+  return{headers,rows,separator:bestSep};
+}
+
 // ====== IMPORT DATA ======
 function ImportData({id,onNav}){
   const{add}=useToast();
   const fileRef=useRef();
   const[crud,setCrud]=useState(null);
-  const[excel,setExcel]=useState(null);
+  const[fileData,setFileData]=useState(null);
   const[mapping,setMapping]=useState({});
   const[busy,setBusy]=useState(false);
+  const[validating,setValidating]=useState(false);
   const[step,setStep]=useState('upload');
   const[result,setResult]=useState(null);
+  const[validation,setValidation]=useState(null);
 
   useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error','Nao encontrada'))},[id]);
 
-  const processFile=file=>{if(!file.name.match(/\.xlsx?$/i)){add('error','Apenas .xlsx');return}
-    const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const json=XLSX.utils.sheet_to_json(ws);if(!json.length){add('error','Vazio');return}const headers=Object.keys(json[0]);setExcel({fileName:file.name,headers,rows:json,sample:json.slice(0,5)});setStep('map');autoMap(headers)}catch{add('error','Erro ao ler')}};reader.readAsArrayBuffer(file)};
+  const processFile=file=>{
+    const isCSV=file.name.match(/\.csv$/i);
+    const isXLS=file.name.match(/\.xlsx?$/i);
+    if(!isCSV&&!isXLS){add('error','Formatos aceitos: .xlsx, .csv');return}
+    const reader=new FileReader();
+    reader.onload=e=>{try{
+      let headers,rows;
+      if(isCSV){
+        const text=e.target.result;
+        const parsed=parseCSV(text);
+        headers=parsed.headers;rows=parsed.rows;
+      }else{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const json=XLSX.utils.sheet_to_json(ws);
+        if(!json.length){add('error','Arquivo vazio');return}
+        headers=Object.keys(json[0]);rows=json;
+      }
+      if(!headers.length){add('error','Nenhum cabecalho encontrado');return}
+      setFileData({fileName:file.name,headers,rows,sample:rows.slice(0,5)});
+      setStep('map');autoMap(headers);
+    }catch{add('error','Erro ao ler arquivo')}};
+    if(isCSV)reader.readAsText(file);else reader.readAsArrayBuffer(file);
+  };
 
   const autoMap=hdrs=>{if(!crud)return;const m={};crud.columns.forEach(c=>{const cl=c.name.toLowerCase().replace(/\s+/g,'');const match=hdrs.find(h=>{const hl=h.toLowerCase().replace(/\s+/g,'');return hl===cl||hl.includes(cl)||cl.includes(hl)});if(match)m[c.db_column]=match});setMapping(m)};
 
-  const doImport=async()=>{setBusy(true);try{const r=await api(`/cruds/${id}/import`,{method:'POST',body:JSON.stringify({mapping,rows:excel.rows})});setResult(r);setStep('done');add('success',r.message)}catch(e){add('error',e.message)}finally{setBusy(false)}};
+  const doValidate=async()=>{
+    setValidating(true);
+    try{
+      const model=localStorage.getItem('dbx-ai-model')||'';
+      const res=await api(`/cruds/${id}/import/validate`,{method:'POST',body:JSON.stringify({mapping,rows:fileData.rows,model})});
+      setValidation(res);setStep('validate');
+    }catch(e){add('error',e.message)}
+    finally{setValidating(false)}
+  };
+
+  const doImport=async(onlyValid=false)=>{
+    const rowsToImport=onlyValid&&validation?fileData.rows.filter((_,i)=>validation.rows[i]?.valid):fileData.rows;
+    setBusy(true);
+    try{const r=await api(`/cruds/${id}/import`,{method:'POST',body:JSON.stringify({mapping,rows:rowsToImport})});setResult(r);setStep('done');add('success',r.message)}catch(e){add('error',e.message)}finally{setBusy(false)}
+  };
 
   const mapped=Object.values(mapping).filter(Boolean).length;
+  const reset=()=>{setStep('upload');setFileData(null);setMapping({});setResult(null);setValidation(null)};
 
   if(!crud)return<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>;
 
   return <div className="max-w-4xl mx-auto animate-fade-in">
     <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar para {crud.name}</button>
-    <div className="flex items-center gap-4 mb-6"><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div><div><h1 className="text-2xl font-bold">Importar dados</h1><p className="text-gray-500 dark:text-gray-400 text-sm">Planilha Excel para "{crud.name}"</p></div></div>
+    <div className="flex items-center gap-4 mb-6"><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div><div><h1 className="text-2xl font-bold">Importar dados</h1><p className="text-gray-500 dark:text-gray-400 text-sm">Excel ou CSV para "{crud.name}"</p></div></div>
 
+    {/* Steps indicator */}
+    <div className="flex items-center gap-2 mb-6">{['Upload','Mapear','Validar','Importar'].map((s,i)=>{const steps=['upload','map','validate','done'];const idx=steps.indexOf(step);return<div key={s} className="flex items-center gap-2"><div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${i<=idx?'accent-bg text-white':'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>{i<idx?'✓':i+1}</div><span className="text-xs hidden sm:inline text-gray-500">{s}</span>{i<3&&<div className="w-6 h-px bg-gray-300 dark:bg-gray-700"/>}</div>})}</div>
+
+    {/* Step 1: Upload */}
     {step==='upload'&&<div onDragOver={e=>{e.preventDefault()}} onDrop={e=>{e.preventDefault();processFile(e.dataTransfer.files[0])}} className="border-2 border-dashed rounded-2xl p-12 text-center border-gray-300 dark:border-gray-700 hover:border-gray-400">
-      <div className="text-6xl mb-4">&#128462;</div><h3 className="text-lg font-semibold mb-2">Arraste seu arquivo Excel aqui</h3><p className="text-gray-500 dark:text-gray-400 mb-6">ou clique para selecionar</p>
-      <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={e=>e.target.files[0]&&processFile(e.target.files[0])} className="hidden"/>
-      <button onClick={()=>fileRef.current.click()} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium hover:opacity-90">&#11014; Selecionar arquivo</button>
+      <div className="text-6xl mb-4">&#128462;</div><h3 className="text-lg font-semibold mb-2">Arraste seu arquivo aqui</h3><p className="text-gray-500 dark:text-gray-400 mb-6">Formatos aceitos: .xlsx .csv (separador auto-detectado)</p>
+      <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={e=>e.target.files[0]&&processFile(e.target.files[0])} className="hidden"/>
+      <button onClick={()=>fileRef.current.click()} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium hover:opacity-90">Selecionar arquivo</button>
     </div>}
 
-    {step==='map'&&excel&&<div className="space-y-6">
+    {/* Step 2: Map */}
+    {step==='map'&&fileData&&<div className="space-y-6">
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between">
-        <div><span className="text-2xl mr-3">&#128462;</span><strong>{excel.fileName}</strong> — {excel.rows.length.toLocaleString('pt-BR')} linhas, {excel.headers.length} colunas</div>
-        <button onClick={()=>{setStep('upload');setExcel(null);setMapping({})}} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">&#10005;</button>
+        <div><strong>{fileData.fileName}</strong> — {fileData.rows.length.toLocaleString('pt-BR')} linhas, {fileData.headers.length} colunas</div>
+        <button onClick={reset} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">&#10005;</button>
       </div>
-      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Mapeamento de colunas</h2><button onClick={()=>autoMap(excel.headers)} className="px-3 py-1.5 text-sm font-medium accent-text hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg">&#9889; Auto-mapear</button></div>
+      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Mapeamento de colunas</h2><button onClick={()=>autoMap(fileData.headers)} className="px-3 py-1.5 text-sm font-medium accent-text hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg">Auto-mapear</button></div>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="grid grid-cols-12 px-6 py-3 bg-gray-50 dark:bg-gray-800 text-sm font-medium"><div className="col-span-5">Coluna da Tabela</div><div className="col-span-2 text-center">&rarr;</div><div className="col-span-5">Coluna do Excel</div></div>
+        <div className="grid grid-cols-12 px-6 py-3 bg-gray-50 dark:bg-gray-800 text-sm font-medium"><div className="col-span-5">Coluna da Tabela</div><div className="col-span-2 text-center">&rarr;</div><div className="col-span-5">Coluna do Arquivo</div></div>
         <div className="divide-y divide-gray-100 dark:divide-gray-800">{crud.columns.map(c=><div key={c.id} className="grid grid-cols-12 items-center px-6 py-3 gap-2">
-          <div className="col-span-5 flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{backgroundColor:crud.color}}/><span className="font-medium text-sm">{c.name}</span><span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{c.data_type}</span>{c.is_required&&<span className="text-xs text-rose-500">*</span>}</div>
+          <div className="col-span-5 flex items-center gap-2 flex-wrap"><div className="w-2 h-2 rounded-full" style={{backgroundColor:crud.color}}/><span className="font-medium text-sm">{c.name}</span><span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{c.data_type}</span>{c.is_required&&<span className="text-xs text-rose-500">*</span>}{c.is_unique&&<span className="text-xs px-1 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">UK</span>}</div>
           <div className="col-span-2 flex justify-center"><div className={`w-8 h-px ${mapping[c.db_column]?'bg-emerald-400':'bg-gray-300 dark:bg-gray-700'}`}/>{mapping[c.db_column]&&<span className="text-emerald-500 -ml-1">✓</span>}</div>
-          <div className="col-span-5"><select value={mapping[c.db_column]||''} onChange={e=>setMapping({...mapping,[c.db_column]:e.target.value})} className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 ${mapping[c.db_column]?'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20':'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}><option value="">-- Selecione --</option>{excel.headers.map(h=><option key={h} value={h}>{h}</option>)}</select></div>
+          <div className="col-span-5"><select value={mapping[c.db_column]||''} onChange={e=>setMapping({...mapping,[c.db_column]:e.target.value})} className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 ${mapping[c.db_column]?'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20':'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}><option value="">-- Selecione --</option>{fileData.headers.map(h=><option key={h} value={h}>{h}</option>)}</select></div>
         </div>)}</div>
       </div>
-      {mapped>0&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"><h3 className="font-medium text-sm">Pre-visualizacao (5 linhas)</h3><span className="text-xs text-gray-400">{mapped}/{crud.columns.length} mapeadas</span></div>
-        <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-800"><tr>{crud.columns.filter(c=>mapping[c.db_column]).map(c=><th key={c.id} className="text-left px-4 py-2 font-medium">{c.name}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{excel.sample.map((r,i)=><tr key={i}>{crud.columns.filter(c=>mapping[c.db_column]).map(c=><td key={c.id} className="px-4 py-2 truncate max-w-xs">{r[mapping[c.db_column]]!=null?String(r[mapping[c.db_column]]):'-'}</td>)}</tr>)}</tbody></table></div>
-      </div>}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500">{mapped===0&&<span className="text-amber-600">&#9888; Mapeie pelo menos uma coluna</span>}</div>
-        <button onClick={doImport} disabled={mapped===0||busy} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?'Importando...':'&#11014; Importar '+excel.rows.length.toLocaleString('pt-BR')+' linhas'}</button>
+        <div className="text-sm text-gray-500">{mapped===0&&<span className="text-amber-600">Mapeie pelo menos uma coluna</span>}</div>
+        <button onClick={doValidate} disabled={mapped===0||validating} className="px-6 py-2.5 accent-bg text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50">{validating?'Validando...':'Validar '+fileData.rows.length.toLocaleString('pt-BR')+' linhas'}</button>
       </div>
     </div>}
 
+    {/* Step 3: Validate */}
+    {step==='validate'&&validation&&<div className="space-y-6">
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 text-center"><div className="text-2xl font-bold">{validation.total}</div><div className="text-sm text-gray-500">Total</div></div>
+        <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-4 text-center"><div className="text-2xl font-bold text-emerald-600">{validation.valid}</div><div className="text-sm text-emerald-600">Validos</div></div>
+        <div className={`rounded-2xl border p-4 text-center ${validation.invalid>0?'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800':'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}><div className={`text-2xl font-bold ${validation.invalid>0?'text-rose-600':'text-gray-400'}`}>{validation.invalid}</div><div className={`text-sm ${validation.invalid>0?'text-rose-600':'text-gray-400'}`}>Com erro</div></div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-800"><h3 className="font-medium">Resultado da validacao</h3></div>
+        <div className="overflow-x-auto max-h-96 overflow-y-auto"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-800 sticky top-0"><tr>
+          <th className="w-10 px-4 py-2 text-left">#</th>
+          <th className="w-10 px-4 py-2 text-center">Status</th>
+          {crud.columns.filter(c=>mapping[c.db_column]).map(c=><th key={c.id} className="text-left px-4 py-2 font-medium">{c.name}</th>)}
+          <th className="text-left px-4 py-2 font-medium">Erros</th>
+        </tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+          {validation.rows.map((vr,i)=><tr key={i} className={vr.valid?'':'bg-rose-50/50 dark:bg-rose-950/10'}>
+            <td className="px-4 py-2 text-gray-400 text-xs">{vr.row}</td>
+            <td className="px-4 py-2 text-center">{vr.valid?<span className="text-emerald-500">&#10003;</span>:<span className="text-rose-500">&#10007;</span>}</td>
+            {crud.columns.filter(c=>mapping[c.db_column]).map(c=><td key={c.id} className="px-4 py-2 text-xs truncate max-w-[150px]">{vr.preview?.[c.name]||'-'}</td>)}
+            <td className="px-4 py-2">{vr.errors.length>0&&<div className="space-y-0.5">{vr.errors.map((e,j)=><div key={j} className="text-xs text-rose-600"><strong>{e.field}:</strong> {e.message}</div>)}</div>}</td>
+          </tr>)}
+        </tbody></table></div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <button onClick={()=>setStep('map')} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800">&larr; Voltar ao mapeamento</button>
+        <div className="flex gap-3">
+          {validation.invalid>0&&validation.valid>0&&<button onClick={()=>doImport(true)} disabled={busy} className="px-5 py-2.5 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 disabled:opacity-50">{busy?'Importando...':'Importar apenas validos ('+validation.valid+')'}</button>}
+          <button onClick={()=>doImport(false)} disabled={busy||validation.valid===0} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?'Importando...':'Importar todos ('+validation.total+')'}</button>
+        </div>
+      </div>
+    </div>}
+
+    {/* Step 4: Done */}
     {step==='done'&&result&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center">
       <div className="text-5xl mb-4">&#9989;</div>
       <h2 className="text-xl font-bold mb-2">Importacao concluida!</h2>
       <p className="text-gray-500 dark:text-gray-400 mb-6">{result.inserted.toLocaleString('pt-BR')} importados{result.errors>0&&<span className="text-rose-500"> ({result.errors} erros)</span>}</p>
       <div className="flex items-center justify-center gap-3">
-        <button onClick={()=>{setStep('upload');setExcel(null);setMapping({});setResult(null)}} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">Importar mais</button>
+        <button onClick={reset} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">Importar mais</button>
         <button onClick={()=>onNav('view',id)} className="px-4 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">Ver dados</button>
       </div>
     </div>}

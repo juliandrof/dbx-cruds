@@ -70,15 +70,15 @@ def init_schema():
                     data_type VARCHAR(50) NOT NULL DEFAULT 'text',
                     is_required BOOLEAN DEFAULT FALSE,
                     validation_rule TEXT DEFAULT '',
+                    is_unique BOOLEAN DEFAULT FALSE,
                     position INTEGER NOT NULL DEFAULT 0,
                     is_deleted BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            # Migration: add validation_rule if missing on existing tables
-            cur.execute("""
-                ALTER TABLE crud_columns ADD COLUMN IF NOT EXISTS validation_rule TEXT DEFAULT ''
-            """)
+            # Migrations
+            cur.execute("ALTER TABLE crud_columns ADD COLUMN IF NOT EXISTS validation_rule TEXT DEFAULT ''")
+            cur.execute("ALTER TABLE crud_columns ADD COLUMN IF NOT EXISTS is_unique BOOLEAN DEFAULT FALSE")
             # Validation tools library (auto-growing, reusable across forms)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS validation_tools (
@@ -116,6 +116,15 @@ def create_data_table(table_name: str, columns: list[dict]):
     with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute(ddl)
+            # Create unique partial indexes for unique columns (excluding soft-deleted rows)
+            for col in columns:
+                if col.get("is_unique"):
+                    idx_name = f"uq_{table_name}_{col['db_column']}"[:63]
+                    cur.execute(f'''
+                        CREATE UNIQUE INDEX IF NOT EXISTS "{idx_name}"
+                        ON "{table_name}" ("{col['db_column']}")
+                        WHERE _is_deleted = FALSE
+                    ''')
         conn.commit()
 
 

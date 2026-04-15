@@ -62,6 +62,7 @@ def create_crud(body: CrudCreate):
             "db_column": db_col,
             "data_type": col.data_type,
             "is_required": col.is_required,
+            "is_unique": col.is_unique,
             "validation_rule": col.validation_rule,
             "position": i,
         })
@@ -96,9 +97,9 @@ def create_crud(body: CrudCreate):
 
             for cm in columns_meta:
                 cur.execute(
-                    """INSERT INTO crud_columns (crud_id, name, db_column, data_type, is_required, validation_rule, position)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                    (crud_id, cm["name"], cm["db_column"], cm["data_type"], cm["is_required"], cm["validation_rule"], cm["position"]),
+                    """INSERT INTO crud_columns (crud_id, name, db_column, data_type, is_required, is_unique, validation_rule, position)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (crud_id, cm["name"], cm["db_column"], cm["data_type"], cm["is_required"], cm["is_unique"], cm["validation_rule"], cm["position"]),
                 )
         conn.commit()
 
@@ -121,7 +122,8 @@ def get_crud(crud_id: int):
                 raise HTTPException(404, "CRUD não encontrado")
 
             cur.execute(
-                """SELECT id, name, db_column, data_type, is_required, position, COALESCE(validation_rule, '')
+                """SELECT id, name, db_column, data_type, is_required, position,
+                          COALESCE(validation_rule, ''), COALESCE(is_unique, FALSE)
                    FROM crud_columns
                    WHERE crud_id = %s AND is_deleted = FALSE
                    ORDER BY position""",
@@ -136,6 +138,7 @@ def get_crud(crud_id: int):
                     "is_required": r[4],
                     "position": r[5],
                     "validation_rule": r[6],
+                    "is_unique": r[7],
                 }
                 for r in cur.fetchall()
             ]
@@ -234,9 +237,9 @@ def add_column(crud_id: int, body: ColumnAdd):
             next_pos = cur.fetchone()[0]
 
             cur.execute(
-                """INSERT INTO crud_columns (crud_id, name, db_column, data_type, is_required, validation_rule, position)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-                (crud_id, body.name, db_col, body.data_type, body.is_required, body.validation_rule, next_pos),
+                """INSERT INTO crud_columns (crud_id, name, db_column, data_type, is_required, is_unique, validation_rule, position)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+                (crud_id, body.name, db_col, body.data_type, body.is_required, body.is_unique, body.validation_rule, next_pos),
             )
             col_id = cur.fetchone()[0]
 
