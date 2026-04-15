@@ -1,0 +1,46 @@
+flowchart TD
+    A(["User writes validation rule
+e.g. 'CPF valido'"]) --> B
+
+    B{"Tool exists
+in library?"}
+
+    B -->|YES| C["Load cached code
+from Lakebase"]
+    B -->|NO| D["LLM generates
+Python code"]
+
+    C --> E[Execute locally]
+    D --> F["Save as new tool
+in Lakebase"]
+    F --> G[Execute locally]
+
+    E --> H(["Return result
+instant"])
+    G --> I([Return result])
+
+    I --> J(["Subsequent calls
+always take cached path"])
+    J --> B
+
+    style A fill:#1a1a2e,stroke:#4a90d9,stroke-width:2px,color:#ffffff
+    style B fill:#2c3e50,stroke:#7f8c8d,stroke-width:2px,color:#ffffff
+    style C fill:#1a5276,stroke:#2980b9,stroke-width:2px,color:#ffffff
+    style D fill:#1e4d2b,stroke:#27ae60,stroke-width:2px,color:#ffffff
+    style E fill:#1a5276,stroke:#2980b9,stroke-width:2px,color:#ffffff
+    style F fill:#1e4d2b,stroke:#27ae60,stroke-width:2px,color:#ffffff
+    style G fill:#1e4d2b,stroke:#27ae60,stroke-width:2px,color:#ffffff
+    style H fill:#1a5276,stroke:#2980b9,stroke-width:3px,color:#ffffff
+    style I fill:#1e4d2b,stroke:#27ae60,stroke-width:3px,color:#ffffff
+    style J fill:#4a235a,stroke:#8e44ad,stroke-width:2px,color:#ffffff
+
+    linkStyle 0 stroke:#7f8c8d,stroke-width:2px
+    linkStyle 1 stroke:#2980b9,stroke-width:2.5px
+    linkStyle 2 stroke:#27ae60,stroke-width:2.5px
+    linkStyle 3 stroke:#2980b9,stroke-width:2px
+    linkStyle 4 stroke:#27ae60,stroke-width:2px
+    linkStyle 5 stroke:#27ae60,stroke-width:2px
+    linkStyle 6 stroke:#2980b9,stroke-width:2px
+    linkStyle 7 stroke:#27ae60,stroke-width:2px
+    linkStyle 8 stroke:#8e44ad,stroke-width:2px,stroke-dasharray:5 5
+    linkStyle 9 stroke:#8e44ad,stroke-width:2px,stroke-dasharray:5 5

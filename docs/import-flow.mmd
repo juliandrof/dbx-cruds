@@ -1,0 +1,48 @@
+flowchart TD
+    A(["`**Upload arquivo**
+    xlsx ou csv`"]) --> B
+
+    B["`**Auto-detectar formato e separador**`"] --> C
+
+    C["`**Mapeamento de colunas**
+    visual de/para`"] --> D
+
+    D["`**Validacao**`"] --> D1 & D2 & D3
+
+    D1[Campos obrigatorios]
+    D2["`Chaves unicas
+    banco + batch`"]
+    D3[Regras AI]
+
+    D1 & D2 & D3 --> E
+
+    E{"`**Todos validos?**`"}
+
+    E -- SIM --> F["`**Importar todos**`"]
+
+    E -- NAO --> G["`**Escolha do usuario**`"]
+
+    G --> G1["`**Importar apenas validos**`"]
+    G --> G2["`**Corrigir e re-validar**`"]
+
+    G2 --> D
+
+    F --> H
+    G1 --> H
+
+    H[("`**Dados inseridos
+    no Lakebase**`")]
+
+    style A fill:#4A90D9,stroke:#2C6FAC,color:#fff,rx:20
+    style B fill:#5BA85A,stroke:#3D7A3C,color:#fff
+    style C fill:#5BA85A,stroke:#3D7A3C,color:#fff
+    style D fill:#E8A838,stroke:#B07820,color:#fff
+    style D1 fill:#F5D08A,stroke:#C8A040,color:#333
+    style D2 fill:#F5D08A,stroke:#C8A040,color:#333
+    style D3 fill:#F5D08A,stroke:#C8A040,color:#333
+    style E fill:#E05C3A,stroke:#A03A20,color:#fff
+    style F fill:#3D8F6E,stroke:#246050,color:#fff
+    style G fill:#9B59B6,stroke:#6C3483,color:#fff
+    style G1 fill:#7D3C98,stroke:#5B2C6F,color:#fff
+    style G2 fill:#7D3C98,stroke:#5B2C6F,color:#fff
+    style H fill:#1E6FA8,stroke:#104E78,color:#fff

@@ -1,0 +1,49 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#1B3A5C",
+    "primaryTextColor": "#FFFFFF",
+    "primaryBorderColor": "#FF3621",
+    "lineColor": "#5A5A5A",
+    "secondaryColor": "#2D6A9F",
+    "clusterBkg": "#EAF2FB",
+    "clusterBorder": "#2D6A9F",
+    "edgeLabelBackground": "#FFFFFF",
+    "fontFamily": "Segoe UI, Helvetica, Arial, sans-serif",
+    "fontSize": "15px"
+  }
+}}%%
+flowchart LR
+    UI["<b>Web Browser</b><br/>User Interface"]
+
+    subgraph DatabricksApp["Databricks App  —  DBX CRUDs"]
+        direction TB
+        FE["<b>React Frontend</b><br/>CDN-based SPA<br/>Vite + TypeScript"]
+        BE["<b>FastAPI Backend</b><br/>REST API / Python 3.11"]
+        FE <-->|"Internal HTTP"| BE
+    end
+
+    subgraph Lakebase["Lakebase  (PostgreSQL)"]
+        direction TB
+        T1[("crud_definitions")]
+        T2[("crud_columns")]
+        T3[("validation_tools")]
+        T4[("dynamic data tables")]
+    end
+
+    FM["<b>Foundation Model API</b><br/>LLM-based code generation<br/>Validation logic"]
+
+    UI -->|"HTTPS"| FE
+    BE -->|"SQL / psycopg2"| Lakebase
+    BE -->|"REST API"| FM
+
+    style UI fill:#DCEEFB,stroke:#2D6A9F,stroke-width:2px,color:#1B3A5C
+    style DatabricksApp fill:#EAF2FB,stroke:#FF3621,stroke-width:3px,color:#1B3A5C
+    style Lakebase fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B3A5C
+    style FE fill:#1B3A5C,stroke:#FF3621,stroke-width:2px,color:#FFFFFF
+    style BE fill:#FF3621,stroke:#1B3A5C,stroke-width:2px,color:#FFFFFF
+    style T1 fill:#C8E6C9,stroke:#2E7D32,color:#1B3A5C
+    style T2 fill:#C8E6C9,stroke:#2E7D32,color:#1B3A5C
+    style T3 fill:#C8E6C9,stroke:#2E7D32,color:#1B3A5C
+    style T4 fill:#C8E6C9,stroke:#2E7D32,color:#1B3A5C
+    style FM fill:#FFE0B2,stroke:#E65100,stroke-width:2px,color:#1B3A5C
