@@ -20,7 +20,6 @@ body{font-family:'Inter',system-ui,sans-serif}
 .animate-slide-in{animation:slideIn .3s ease-out}
 .card-hover{transition:all .2s}.card-hover:hover{transform:translateY(-2px);box-shadow:0 10px 25px -5px rgb(0 0 0/.1)}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:9999px}
-/* Inputs: dark text on light bg, light text on dark bg */
 input,select,textarea{color:#111827}
 .dark input,.dark select,.dark textarea{color:#f3f4f6 !important}
 input::placeholder,textarea::placeholder{color:#9ca3af !important}
@@ -33,12 +32,165 @@ input::placeholder,textarea::placeholder{color:#9ca3af !important}
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script type="text/babel" data-type="module">
-const {useState,useEffect,useRef,useCallback,useMemo,createContext,useContext}=React;
+const {useState,useEffect,useRef,useCallback,createContext,useContext}=React;
+
+// ====== i18n ======
+const L={
+pt:{
+  dashboard:'Painel',newTable:'Nova Tabela',settings:'Configuracoes',
+  manageDesc:'Gerencie suas tabelas e dados',tables:'Tabelas',records:'Registros',columns:'Colunas',
+  searchTables:'Buscar tabelas...',noTables:'Nenhuma tabela criada',noTablesDesc:'Crie sua primeira tabela para organizar seus dados',
+  createFirst:'Criar primeira tabela',noResults:'Nenhum resultado',tryOther:'Tente outros termos',
+  open:'Abrir',edit:'Editar',import_:'Importar',export_:'Exportar',delete_:'Excluir',cancel:'Cancelar',confirm:'Confirmar',
+  save:'Salvar',back:'Voltar',next:'Proximo',add:'Adicionar',close:'Fechar',
+  deleteTable:'Excluir Tabela',deleteTableMsg:'Os dados serao preservados mas a tabela nao ficara visivel.',
+  createTitle:'Criar nova Tabela',stepInfo:'Info',stepColumns:'Colunas',stepReview:'Revisar',
+  tableName:'Nome da Tabela',tableNamePh:'Ex: Clientes, Produtos, Pedidos...',
+  description:'Descricao',descPh:'Objetivo desta tabela...',color:'Cor',
+  required:'Obrig.',unique:'Unica',aiRule:'Regra AI:',
+  aiRulePh:'Ex: deve ser um CPF valido, deve ter pelo menos 3 caracteres...',
+  createBtn:'Criar Tabela',creating:'Criando...',
+  searchAll:'Buscar em todos os campos...',noData:'Nenhum registro. Clique em "Adicionar".',
+  deleteRecord:'Excluir registro',deleteRecordMsg:'Tem certeza?',
+  deleteRecords:'Excluir registros',record:'registro(s)',
+  editTable:'Editar Tabela',generalInfo:'Informacoes gerais',name:'Nome',
+  newColumn:'Nova coluna',colName:'Nome',removeCol:'Remover coluna',removeColMsg:'Dados preservados mas nao visiveis.',
+  importTitle:'Importar dados',importSub:'Excel ou CSV para',
+  stUpload:'Upload',stMap:'Mapear',stValidate:'Validar',stImport:'Importar',
+  dragFile:'Arraste seu arquivo aqui',formats:'Formatos aceitos: .xlsx .csv (separador auto-detectado)',
+  selectFile:'Selecionar arquivo',colMapping:'Mapeamento de colunas',autoMap:'Auto-mapear',
+  tableCol:'Coluna da Tabela',fileCol:'Coluna do Arquivo',selectCol:'-- Selecione --',
+  mapHint:'Mapeie pelo menos uma coluna',validate:'Validar',lines:'linhas',validating:'Validando...',
+  total:'Total',valid:'Validos',invalid:'Com erro',validationResult:'Resultado da validacao',
+  status:'Status',errors:'Erros',backToMap:'Voltar ao mapeamento',
+  importOnlyValid:'Importar apenas validos',importAll:'Importar todos',importing:'Importando...',
+  importDone:'Importacao concluida!',imported:'importados',importMore:'Importar mais',viewData:'Ver dados',
+  aiModel:'Modelo de IA',aiModelDesc:'Modelo usado para validacao inteligente de dados',
+  loadingModels:'Carregando modelos...',currentModel:'Modelo atual:',default_:'padrao',
+  theme:'Tema',light:'Claro',dark:'Escuro',accentColor:'Cor de destaque',preview:'Preview',
+  primary:'Primario',secondary:'Secundario',link:'Link',
+  toolLibrary:'Biblioteca de Validacoes',toolLibDesc:'Tools geradas automaticamente pela IA e reutilizadas entre tabelas',
+  toolEmpty:'Nenhuma tool criada ainda. Valide um campo com regra AI para criar a primeira.',
+  toolName:'Tool',ruleExample:'Regra exemplo',uses:'Usos',createdAt:'Criada em',
+  language:'Idioma',langDesc:'Idioma da interface',
+  validLabel:'Valido',cached:'cached',
+  powered:'Powered by Databricks Lakebase',
+  colN:'coluna',colNs:'colunas',recN:'registro',recNs:'registros',
+  yes:'Sim',no:'Nao',
+  errLoad:'Erro ao carregar',errNotFound:'Nao encontrada',errExport:'Erro ao exportar',
+  tableDeleted:'Tabela excluida',tableUpdated:'Tabela atualizada',
+  colAdded:'adicionada',colRemoved:'Coluna removida',ruleUpdated:'Regra atualizada',
+  added:'Adicionado',updated:'Atualizado',deleted:'Excluido',exported:'Exportado',
+  modelChanged:'Modelo alterado para',created:'criada!',
+},
+en:{
+  dashboard:'Dashboard',newTable:'New Table',settings:'Settings',
+  manageDesc:'Manage your tables and data',tables:'Tables',records:'Records',columns:'Columns',
+  searchTables:'Search tables...',noTables:'No tables created',noTablesDesc:'Create your first table to organize your data',
+  createFirst:'Create first table',noResults:'No results',tryOther:'Try other terms',
+  open:'Open',edit:'Edit',import_:'Import',export_:'Export',delete_:'Delete',cancel:'Cancel',confirm:'Confirm',
+  save:'Save',back:'Back',next:'Next',add:'Add',close:'Close',
+  deleteTable:'Delete Table',deleteTableMsg:'Data will be preserved but the table will no longer be visible.',
+  createTitle:'Create new Table',stepInfo:'Info',stepColumns:'Columns',stepReview:'Review',
+  tableName:'Table Name',tableNamePh:'E.g.: Customers, Products, Orders...',
+  description:'Description',descPh:'Purpose of this table...',color:'Color',
+  required:'Req.',unique:'Unique',aiRule:'AI Rule:',
+  aiRulePh:'E.g.: must be a valid CPF, must have at least 3 characters...',
+  createBtn:'Create Table',creating:'Creating...',
+  searchAll:'Search all fields...',noData:'No records. Click "Add" to start.',
+  deleteRecord:'Delete record',deleteRecordMsg:'Are you sure?',
+  deleteRecords:'Delete records',record:'record(s)',
+  editTable:'Edit Table',generalInfo:'General info',name:'Name',
+  newColumn:'New column',colName:'Name',removeCol:'Remove column',removeColMsg:'Data preserved but no longer visible.',
+  importTitle:'Import data',importSub:'Excel or CSV to',
+  stUpload:'Upload',stMap:'Map',stValidate:'Validate',stImport:'Import',
+  dragFile:'Drag your file here',formats:'Accepted formats: .xlsx .csv (separator auto-detected)',
+  selectFile:'Select file',colMapping:'Column mapping',autoMap:'Auto-map',
+  tableCol:'Table Column',fileCol:'File Column',selectCol:'-- Select --',
+  mapHint:'Map at least one column',validate:'Validate',lines:'lines',validating:'Validating...',
+  total:'Total',valid:'Valid',invalid:'With errors',validationResult:'Validation result',
+  status:'Status',errors:'Errors',backToMap:'Back to mapping',
+  importOnlyValid:'Import only valid',importAll:'Import all',importing:'Importing...',
+  importDone:'Import complete!',imported:'imported',importMore:'Import more',viewData:'View data',
+  aiModel:'AI Model',aiModelDesc:'Model used for smart data validation',
+  loadingModels:'Loading models...',currentModel:'Current model:',default_:'default',
+  theme:'Theme',light:'Light',dark:'Dark',accentColor:'Accent color',preview:'Preview',
+  primary:'Primary',secondary:'Secondary',link:'Link',
+  toolLibrary:'Validation Library',toolLibDesc:'Tools auto-generated by AI and reused across tables',
+  toolEmpty:'No tools yet. Validate a field with an AI rule to create the first one.',
+  toolName:'Tool',ruleExample:'Rule example',uses:'Uses',createdAt:'Created',
+  language:'Language',langDesc:'Interface language',
+  validLabel:'Valid',cached:'cached',
+  powered:'Powered by Databricks Lakebase',
+  colN:'column',colNs:'columns',recN:'record',recNs:'records',
+  yes:'Yes',no:'No',
+  errLoad:'Error loading data',errNotFound:'Not found',errExport:'Error exporting',
+  tableDeleted:'Table deleted',tableUpdated:'Table updated',
+  colAdded:'added',colRemoved:'Column removed',ruleUpdated:'Rule updated',
+  added:'Added',updated:'Updated',deleted:'Deleted',exported:'Exported',
+  modelChanged:'Model changed to',created:'created!',
+},
+es:{
+  dashboard:'Panel',newTable:'Nueva Tabla',settings:'Configuracion',
+  manageDesc:'Administre sus tablas y datos',tables:'Tablas',records:'Registros',columns:'Columnas',
+  searchTables:'Buscar tablas...',noTables:'Ninguna tabla creada',noTablesDesc:'Cree su primera tabla para organizar sus datos',
+  createFirst:'Crear primera tabla',noResults:'Sin resultados',tryOther:'Intente otros terminos',
+  open:'Abrir',edit:'Editar',import_:'Importar',export_:'Exportar',delete_:'Eliminar',cancel:'Cancelar',confirm:'Confirmar',
+  save:'Guardar',back:'Volver',next:'Siguiente',add:'Agregar',close:'Cerrar',
+  deleteTable:'Eliminar Tabla',deleteTableMsg:'Los datos se preservaran pero la tabla no sera visible.',
+  createTitle:'Crear nueva Tabla',stepInfo:'Info',stepColumns:'Columnas',stepReview:'Revisar',
+  tableName:'Nombre de la Tabla',tableNamePh:'Ej: Clientes, Productos, Pedidos...',
+  description:'Descripcion',descPh:'Objetivo de esta tabla...',color:'Color',
+  required:'Req.',unique:'Unica',aiRule:'Regla AI:',
+  aiRulePh:'Ej: debe ser un CPF valido, debe tener al menos 3 caracteres...',
+  createBtn:'Crear Tabla',creating:'Creando...',
+  searchAll:'Buscar en todos los campos...',noData:'Sin registros. Haga clic en "Agregar".',
+  deleteRecord:'Eliminar registro',deleteRecordMsg:'Esta seguro?',
+  deleteRecords:'Eliminar registros',record:'registro(s)',
+  editTable:'Editar Tabla',generalInfo:'Informacion general',name:'Nombre',
+  newColumn:'Nueva columna',colName:'Nombre',removeCol:'Eliminar columna',removeColMsg:'Datos preservados pero no visibles.',
+  importTitle:'Importar datos',importSub:'Excel o CSV para',
+  stUpload:'Upload',stMap:'Mapear',stValidate:'Validar',stImport:'Importar',
+  dragFile:'Arrastre su archivo aqui',formats:'Formatos aceptados: .xlsx .csv (separador auto-detectado)',
+  selectFile:'Seleccionar archivo',colMapping:'Mapeo de columnas',autoMap:'Auto-mapear',
+  tableCol:'Columna de Tabla',fileCol:'Columna del Archivo',selectCol:'-- Seleccione --',
+  mapHint:'Mapee al menos una columna',validate:'Validar',lines:'lineas',validating:'Validando...',
+  total:'Total',valid:'Validos',invalid:'Con errores',validationResult:'Resultado de validacion',
+  status:'Estado',errors:'Errores',backToMap:'Volver al mapeo',
+  importOnlyValid:'Importar solo validos',importAll:'Importar todos',importing:'Importando...',
+  importDone:'Importacion completada!',imported:'importados',importMore:'Importar mas',viewData:'Ver datos',
+  aiModel:'Modelo de IA',aiModelDesc:'Modelo usado para validacion inteligente de datos',
+  loadingModels:'Cargando modelos...',currentModel:'Modelo actual:',default_:'defecto',
+  theme:'Tema',light:'Claro',dark:'Oscuro',accentColor:'Color de destaque',preview:'Vista previa',
+  primary:'Primario',secondary:'Secundario',link:'Enlace',
+  toolLibrary:'Biblioteca de Validaciones',toolLibDesc:'Tools generadas por IA y reutilizadas entre tablas',
+  toolEmpty:'Ninguna tool creada aun. Valide un campo con regla AI para crear la primera.',
+  toolName:'Tool',ruleExample:'Regla ejemplo',uses:'Usos',createdAt:'Creada',
+  language:'Idioma',langDesc:'Idioma de la interfaz',
+  validLabel:'Valido',cached:'cached',
+  powered:'Powered by Databricks Lakebase',
+  colN:'columna',colNs:'columnas',recN:'registro',recNs:'registros',
+  yes:'Si',no:'No',
+  errLoad:'Error al cargar',errNotFound:'No encontrada',errExport:'Error al exportar',
+  tableDeleted:'Tabla eliminada',tableUpdated:'Tabla actualizada',
+  colAdded:'agregada',colRemoved:'Columna eliminada',ruleUpdated:'Regla actualizada',
+  added:'Agregado',updated:'Actualizado',deleted:'Eliminado',exported:'Exportado',
+  modelChanged:'Modelo cambiado a',created:'creada!',
+}};
+const LANG_LABELS={pt:'Portugues',en:'English',es:'Espanol'};
+const I18nCtx=createContext();
+function I18nProvider({children}){
+  const[lang,setLang]=useState(localStorage.getItem('dbx-lang')||'pt');
+  const t=L[lang]||L.pt;
+  const changeLang=l=>{localStorage.setItem('dbx-lang',l);setLang(l);document.documentElement.lang=l==='pt'?'pt-BR':l};
+  return <I18nCtx.Provider value={{t,lang,changeLang}}>{children}</I18nCtx.Provider>
+}
+const useI18n=()=>useContext(I18nCtx);
 
 // ====== API ======
 const api=async(path,opts={})=>{const r=await fetch('/api'+path,{headers:{'Content-Type':'application/json',...opts.headers},...opts});if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||'Erro')}return r.json()};
 
-// ====== TOAST CONTEXT ======
+// ====== TOAST ======
 const ToastCtx=createContext();
 function ToastProvider({children}){
   const[toasts,setToasts]=useState([]);
@@ -54,8 +206,9 @@ function ToastProvider({children}){
 }
 const useToast=()=>useContext(ToastCtx);
 
-// ====== CONFIRM DIALOG ======
+// ====== CONFIRM ======
 function Confirm({open,title,msg,onOk,onCancel,danger}){
+  const{t}=useI18n();
   if(!open)return null;
   return <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel}/>
@@ -63,644 +216,371 @@ function Confirm({open,title,msg,onOk,onCancel,danger}){
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <p className="text-gray-600 dark:text-gray-400 mb-6">{msg}</p>
       <div className="flex justify-end gap-3">
-        <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800">Cancelar</button>
-        <button onClick={onOk} className={`px-4 py-2 rounded-xl text-sm font-medium text-white ${danger?'bg-rose-600 hover:bg-rose-700':'accent-bg hover:opacity-90'}`}>{danger?'Excluir':'Confirmar'}</button>
+        <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800">{t.cancel}</button>
+        <button onClick={onOk} className={`px-4 py-2 rounded-xl text-sm font-medium text-white ${danger?'bg-rose-600 hover:bg-rose-700':'accent-bg hover:opacity-90'}`}>{danger?t.delete_:t.confirm}</button>
       </div>
     </div>
   </div>
 }
 
-// ====== AI VALIDATION HOOK ======
+// ====== AI VALIDATION ======
 function useAIValidation(){
   const[results,setResults]=useState({});
   const[loading,setLoading]=useState({});
-  const validate=async(fieldKey,value,rule,fieldName)=>{
-    if(!rule||!value){setResults(r=>({...r,[fieldKey]:null}));return}
-    setLoading(l=>({...l,[fieldKey]:true}));
+  const validate=async(fk,value,rule,fieldName)=>{
+    if(!rule||!value){setResults(r=>({...r,[fk]:null}));return}
+    setLoading(l=>({...l,[fk]:true}));
     const model=localStorage.getItem('dbx-ai-model')||'';
-    try{
-      const res=await api('/validate',{method:'POST',body:JSON.stringify({value,rule,field_name:fieldName,model})});
-      setResults(r=>({...r,[fieldKey]:res}));
-    }catch{setResults(r=>({...r,[fieldKey]:{valid:true,message:'Erro na validacao'}}));}
-    finally{setLoading(l=>({...l,[fieldKey]:false}))}
+    try{const res=await api('/validate',{method:'POST',body:JSON.stringify({value,rule,field_name:fieldName,model})});setResults(r=>({...r,[fk]:res}))}
+    catch{setResults(r=>({...r,[fk]:{valid:true,message:'Err'}}))}
+    finally{setLoading(l=>({...l,[fk]:false}))}
   };
   const clear=()=>{setResults({});setLoading({})};
   return{results,loading,validate,clear};
 }
+function ValidationBadge({result,loading}){
+  const{t}=useI18n();
+  if(loading)return <span className="inline-flex items-center gap-1 text-xs text-gray-400"><span className="w-3 h-3 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"/>{t.validating}</span>;
+  if(!result)return null;
+  if(result.valid)return <span className="inline-flex items-center gap-1 text-xs text-emerald-600">&#10003; {t.validLabel}{result._reused&&<span className="text-gray-400"> ({t.cached})</span>}</span>;
+  return <span className="inline-flex items-center gap-1 text-xs text-rose-600">&#10007; {result.message||t.invalid}{result._reused&&<span className="text-gray-400"> ({t.cached})</span>}</span>;
+}
 
-// ====== DATA TYPES ======
+// ====== CONSTANTS ======
 const DATA_TYPES=[
   {value:'text',label:'Texto',color:'text-blue-600 bg-blue-100'},
   {value:'integer',label:'Inteiro',color:'text-purple-600 bg-purple-100'},
   {value:'decimal',label:'Decimal',color:'text-orange-600 bg-orange-100'},
-  {value:'boolean',label:'Sim/Nao',color:'text-emerald-600 bg-emerald-100'},
-  {value:'date',label:'Data',color:'text-rose-600 bg-rose-100'},
-  {value:'datetime',label:'Data/Hora',color:'text-cyan-600 bg-cyan-100'},
+  {value:'boolean',label:'Bool',color:'text-emerald-600 bg-emerald-100'},
+  {value:'date',label:'Date',color:'text-rose-600 bg-rose-100'},
+  {value:'datetime',label:'DateTime',color:'text-cyan-600 bg-cyan-100'},
 ];
 const COLORS=['#6366f1','#8b5cf6','#ec4899','#f43f5e','#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6','#1e293b'];
 
-// ====== VALIDATION BADGE ======
-function ValidationBadge({result,loading}){
-  if(loading)return <span className="inline-flex items-center gap-1 text-xs text-gray-400"><span className="w-3 h-3 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"/>Validando...</span>;
-  if(!result)return null;
-  const reused=result._reused;
-  if(result.valid)return <span className="inline-flex items-center gap-1 text-xs text-emerald-600">&#10003; Valido{reused&&<span className="text-gray-400" title={'Tool: '+result._tool}> (cached)</span>}</span>;
-  return <span className="inline-flex items-center gap-1 text-xs text-rose-600">&#10007; {result.message||'Invalido'}{reused&&<span className="text-gray-400" title={'Tool: '+result._tool}> (cached)</span>}</span>;
+// ====== CSV PARSER ======
+function parseCSV(text){
+  const seps=[';',',','|','\t'];
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length)return{headers:[],rows:[]};
+  let bestSep=',',bestScore=0;
+  for(const sep of seps){const counts=lines.slice(0,5).map(l=>l.split(sep).length);const ok=counts.every(c=>c===counts[0])&&counts[0]>1;const sc=ok?counts[0]*10:counts[0];if(sc>bestScore){bestScore=sc;bestSep=sep}}
+  const headers=lines[0].split(bestSep).map(h=>h.trim().replace(/^["']|["']$/g,''));
+  const rows=[];
+  for(let i=1;i<lines.length;i++){const vals=lines[i].split(bestSep).map(v=>v.trim().replace(/^["']|["']$/g,''));const row={};headers.forEach((h,j)=>{row[h]=vals[j]||''});rows.push(row)}
+  return{headers,rows}
 }
 
 // ====== DASHBOARD ======
 function Dashboard({onNav}){
-  const[cruds,setCruds]=useState([]);
-  const[stats,setStats]=useState({total_cruds:0,total_rows:0,total_columns:0});
-  const[filter,setFilter]=useState('');
-  const[loading,setLoading]=useState(true);
-  const[delId,setDelId]=useState(null);
-  const{add}=useToast();
-
-  const load=()=>Promise.all([api('/cruds'),api('/stats')]).then(([c,s])=>{setCruds(c);setStats(s)}).catch(()=>add('error','Erro ao carregar')).finally(()=>setLoading(false));
+  const{t}=useI18n();const{add}=useToast();
+  const[cruds,setCruds]=useState([]);const[stats,setStats]=useState({total_cruds:0,total_rows:0,total_columns:0});
+  const[filter,setFilter]=useState('');const[loading,setLoading]=useState(true);const[delId,setDelId]=useState(null);
+  const load=()=>Promise.all([api('/cruds'),api('/stats')]).then(([c,s])=>{setCruds(c);setStats(s)}).catch(()=>add('error',t.errLoad)).finally(()=>setLoading(false));
   useEffect(()=>{load()},[]);
-
-  const toggleFav=async(c)=>{try{await api(`/cruds/${c.id}`,{method:'PUT',body:JSON.stringify({is_favorite:!c.is_favorite})});setCruds(cs=>cs.map(x=>x.id===c.id?{...x,is_favorite:!x.is_favorite}:x))}catch{add('error','Erro')}};
-  const handleDel=async()=>{if(!delId)return;try{await api(`/cruds/${delId}`,{method:'DELETE'});setCruds(cs=>cs.filter(x=>x.id!==delId));add('success','Tabela excluida')}catch{add('error','Erro')}setDelId(null)};
-
+  const toggleFav=async(c)=>{try{await api(`/cruds/${c.id}`,{method:'PUT',body:JSON.stringify({is_favorite:!c.is_favorite})});setCruds(cs=>cs.map(x=>x.id===c.id?{...x,is_favorite:!x.is_favorite}:x))}catch{add('error','Err')}};
+  const handleDel=async()=>{if(!delId)return;try{await api(`/cruds/${delId}`,{method:'DELETE'});setCruds(cs=>cs.filter(x=>x.id!==delId));add('success',t.tableDeleted)}catch{add('error','Err')}setDelId(null)};
   const filtered=cruds.filter(c=>c.name.toLowerCase().includes(filter.toLowerCase())||c.description.toLowerCase().includes(filter.toLowerCase()));
-
   if(loading)return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>;
-
   return <div className="space-y-6 animate-fade-in">
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-      <div><h1 className="text-3xl font-bold tracking-tight">Painel</h1><p className="text-gray-500 dark:text-gray-400 mt-1">Gerencie suas tabelas e dados</p></div>
-      <button onClick={()=>onNav('create')} className="inline-flex items-center gap-2 px-5 py-2.5 accent-bg text-white rounded-xl font-medium shadow-md hover:opacity-90">+ Nova Tabela</button>
+      <div><h1 className="text-3xl font-bold tracking-tight">{t.dashboard}</h1><p className="text-gray-500 dark:text-gray-400 mt-1">{t.manageDesc}</p></div>
+      <button onClick={()=>onNav('create')} className="inline-flex items-center gap-2 px-5 py-2.5 accent-bg text-white rounded-xl font-medium shadow-md hover:opacity-90">+ {t.newTable}</button>
     </div>
-
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      {[{l:'Tabelas',v:stats.total_cruds,c:'text-indigo-600 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400'},{l:'Registros',v:stats.total_rows,c:'text-emerald-600 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400'},{l:'Colunas',v:stats.total_columns,c:'text-amber-600 bg-amber-100 dark:bg-amber-950 dark:text-amber-400'}].map(s=>
-        <div key={s.l} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm"><div className="flex items-center gap-3"><div className={`p-2.5 rounded-xl ${s.c}`}><span className="text-lg font-bold">#</span></div><div><div className="text-2xl font-bold">{s.v.toLocaleString('pt-BR')}</div><div className="text-sm text-gray-500 dark:text-gray-400">{s.l}</div></div></div></div>
-      )}
+      {[{l:t.tables,v:stats.total_cruds,c:'text-indigo-600 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400'},{l:t.records,v:stats.total_rows,c:'text-emerald-600 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400'},{l:t.columns,v:stats.total_columns,c:'text-amber-600 bg-amber-100 dark:bg-amber-950 dark:text-amber-400'}].map(s=>
+        <div key={s.l} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm"><div className="flex items-center gap-3"><div className={`p-2.5 rounded-xl ${s.c}`}><span className="text-lg font-bold">#</span></div><div><div className="text-2xl font-bold">{s.v.toLocaleString()}</div><div className="text-sm text-gray-500 dark:text-gray-400">{s.l}</div></div></div></div>)}
     </div>
-
-    {cruds.length>0&&<div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span><input type="text" placeholder="Buscar tabelas..." value={filter} onChange={e=>setFilter(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>}
-
-    {filtered.length===0?
-      <div className="text-center py-16"><div className="text-6xl mb-4">&#128202;</div><h3 className="text-lg font-semibold mb-2">{cruds.length===0?'Nenhuma tabela criada':'Nenhum resultado'}</h3><p className="text-gray-500 dark:text-gray-400 mb-6">{cruds.length===0?'Crie sua primeira tabela para organizar seus dados':'Tente outros termos'}</p>{cruds.length===0&&<button onClick={()=>onNav('create')} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium">Criar primeira tabela</button>}</div>
-    :
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(c=><div key={c.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm card-hover overflow-hidden">
-          <div className="h-1.5" style={{backgroundColor:c.color}}/>
-          <div className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{backgroundColor:c.color}}>{c.name.substring(0,2).toUpperCase()}</div>
-                <div><h3 className="font-semibold">{c.name}</h3>{c.description&&<p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{c.description}</p>}</div>
-              </div>
-              <button onClick={()=>toggleFav(c)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"><span style={{color:c.is_favorite?'#fbbf24':'#d1d5db'}}>{c.is_favorite?'★':'☆'}</span></button>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <span>{c.column_count} colunas</span><span>{c.row_count.toLocaleString('pt-BR')} registros</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={()=>onNav('view',c.id)} className="flex-1 px-3 py-2 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">Abrir &rarr;</button>
-              <button onClick={()=>onNav('edit',c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800" title="Editar">&#9998;</button>
-              <button onClick={()=>onNav('import',c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800" title="Importar">&#128462;</button>
-              <button onClick={()=>setDelId(c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-rose-50 dark:hover:bg-rose-950 hover:border-rose-300 hover:text-rose-600" title="Excluir">&#128465;</button>
-            </div>
-          </div>
-        </div>)}
-      </div>
-    }
-    <Confirm open={delId!==null} title="Excluir Tabela" msg="Os dados serao preservados mas a tabela nao ficara visivel." danger onOk={handleDel} onCancel={()=>setDelId(null)}/>
+    {cruds.length>0&&<div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span><input type="text" placeholder={t.searchTables} value={filter} onChange={e=>setFilter(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>}
+    {filtered.length===0?<div className="text-center py-16"><div className="text-6xl mb-4">&#128202;</div><h3 className="text-lg font-semibold mb-2">{cruds.length===0?t.noTables:t.noResults}</h3><p className="text-gray-500 dark:text-gray-400 mb-6">{cruds.length===0?t.noTablesDesc:t.tryOther}</p>{cruds.length===0&&<button onClick={()=>onNav('create')} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium">{t.createFirst}</button>}</div>
+    :<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{filtered.map(c=><div key={c.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm card-hover overflow-hidden">
+      <div className="h-1.5" style={{backgroundColor:c.color}}/><div className="p-5">
+        <div className="flex items-start justify-between mb-3"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{backgroundColor:c.color}}>{c.name.substring(0,2).toUpperCase()}</div><div><h3 className="font-semibold">{c.name}</h3>{c.description&&<p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{c.description}</p>}</div></div>
+          <button onClick={()=>toggleFav(c)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"><span style={{color:c.is_favorite?'#fbbf24':'#d1d5db'}}>{c.is_favorite?'★':'☆'}</span></button></div>
+        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4"><span>{c.column_count} {t.colNs}</span><span>{c.row_count.toLocaleString()} {t.recNs}</span></div>
+        <div className="flex items-center gap-2">
+          <button onClick={()=>onNav('view',c.id)} className="flex-1 px-3 py-2 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">{t.open} &rarr;</button>
+          <button onClick={()=>onNav('edit',c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800" title={t.edit}>&#9998;</button>
+          <button onClick={()=>onNav('import',c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800" title={t.import_}>&#128462;</button>
+          <button onClick={()=>setDelId(c.id)} className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-rose-50 dark:hover:bg-rose-950 hover:border-rose-300 hover:text-rose-600" title={t.delete_}>&#128465;</button>
+        </div></div></div>)}</div>}
+    <Confirm open={delId!==null} title={t.deleteTable} msg={t.deleteTableMsg} danger onOk={handleDel} onCancel={()=>setDelId(null)}/>
   </div>
 }
 
-// ====== CREATE TABLE ======
+// ====== CREATE ======
 function CreateCrud({onNav}){
-  const{add}=useToast();
-  const[step,setStep]=useState(1);
-  const[name,setName]=useState('');
-  const[desc,setDesc]=useState('');
-  const[color,setColor]=useState('#6366f1');
+  const{t}=useI18n();const{add}=useToast();
+  const[step,setStep]=useState(1);const[name,setName]=useState('');const[desc,setDesc]=useState('');const[color,setColor]=useState('#6366f1');
   const[cols,setCols]=useState([{id:'1',name:'',data_type:'text',is_required:false,is_unique:false,validation_rule:''}]);
   const[busy,setBusy]=useState(false);
-
   const addCol=()=>setCols([...cols,{id:Date.now().toString(),name:'',data_type:'text',is_required:false,is_unique:false,validation_rule:''}]);
   const rmCol=id=>{if(cols.length>1)setCols(cols.filter(c=>c.id!==id))};
   const updCol=(id,f,v)=>setCols(cols.map(c=>c.id===id?{...c,[f]:v}:c));
-
-  const submit=async()=>{setBusy(true);try{const r=await api('/cruds',{method:'POST',body:JSON.stringify({name:name.trim(),description:desc.trim(),color,columns:cols.map(c=>({name:c.name.trim(),data_type:c.data_type,is_required:c.is_required,is_unique:c.is_unique,validation_rule:c.validation_rule}))})});add('success',`"${name}" criada!`);onNav('view',r.id)}catch(e){add('error',e.message)}finally{setBusy(false)}};
-
+  const submit=async()=>{setBusy(true);try{const r=await api('/cruds',{method:'POST',body:JSON.stringify({name:name.trim(),description:desc.trim(),color,columns:cols.map(c=>({name:c.name.trim(),data_type:c.data_type,is_required:c.is_required,is_unique:c.is_unique,validation_rule:c.validation_rule}))})});add('success',`"${name}" ${t.created}`);onNav('view',r.id)}catch(e){add('error',e.message)}finally{setBusy(false)}};
   return <div className="max-w-3xl mx-auto animate-fade-in">
-    <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar</button>
-    <h1 className="text-2xl font-bold mb-2">Criar nova Tabela</h1>
-    <div className="flex items-center gap-2 mb-8">{[1,2,3].map(s=><div key={s} className="flex items-center gap-2"><div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${s===step?'accent-bg text-white':s<step?'bg-emerald-500 text-white':'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>{s<step?'✓':s}</div><span className="text-sm hidden sm:inline text-gray-500 dark:text-gray-400">{s===1?'Info':s===2?'Colunas':'Revisar'}</span>{s<3&&<div className="w-8 h-px bg-gray-300 dark:bg-gray-700"/>}</div>)}</div>
-
+    <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; {t.back}</button>
+    <h1 className="text-2xl font-bold mb-2">{t.createTitle}</h1>
+    <div className="flex items-center gap-2 mb-8">{[1,2,3].map(s=><div key={s} className="flex items-center gap-2"><div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${s===step?'accent-bg text-white':s<step?'bg-emerald-500 text-white':'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>{s<step?'✓':s}</div><span className="text-sm hidden sm:inline text-gray-500 dark:text-gray-400">{s===1?t.stepInfo:s===2?t.stepColumns:t.stepReview}</span>{s<3&&<div className="w-8 h-px bg-gray-300 dark:bg-gray-700"/>}</div>)}</div>
     {step===1&&<div className="space-y-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-      <div><label className="block text-sm font-medium mb-2">Nome da Tabela *</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: Clientes, Produtos, Pedidos..." className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300" autoFocus/></div>
-      <div><label className="block text-sm font-medium mb-2">Descricao</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder="Objetivo desta tabela..." className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"/></div>
-      <div><label className="block text-sm font-medium mb-3">Cor</label><div className="flex flex-wrap gap-2">{COLORS.map(c=><button key={c} onClick={()=>setColor(c)} className={`w-9 h-9 rounded-xl transition-all ${color===c?'ring-2 ring-offset-2 ring-gray-400 scale-110':'hover:scale-105'}`} style={{backgroundColor:c}}/>)}</div></div>
+      <div><label className="block text-sm font-medium mb-2">{t.tableName} *</label><input value={name} onChange={e=>setName(e.target.value)} placeholder={t.tableNamePh} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300" autoFocus/></div>
+      <div><label className="block text-sm font-medium mb-2">{t.description}</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder={t.descPh} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"/></div>
+      <div><label className="block text-sm font-medium mb-3">{t.color}</label><div className="flex flex-wrap gap-2">{COLORS.map(c=><button key={c} onClick={()=>setColor(c)} className={`w-9 h-9 rounded-xl transition-all ${color===c?'ring-2 ring-offset-2 ring-gray-400 scale-110':'hover:scale-105'}`} style={{backgroundColor:c}}/>)}</div></div>
     </div>}
-
     {step===2&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"><h3 className="font-semibold">Colunas</h3><button onClick={addCol} className="flex items-center gap-1.5 px-3 py-1.5 accent-bg text-white rounded-lg text-sm font-medium">+ Adicionar</button></div>
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">{cols.map((col,i)=><div key={col.id} className="px-6 py-4 space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div className="sm:col-span-5"><input value={col.name} onChange={e=>updCol(col.id,'name',e.target.value)} placeholder={`Coluna ${i+1}`} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
-            <div className="sm:col-span-4"><select value={col.data_type} onChange={e=>updCol(col.id,'data_type',e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select></div>
-            <div className="sm:col-span-3 flex items-center gap-3"><label className="flex items-center gap-1 text-sm cursor-pointer"><input type="checkbox" checked={col.is_required} onChange={e=>updCol(col.id,'is_required',e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label><label className="flex items-center gap-1 text-sm cursor-pointer" title="Chave unica - nao permite valores duplicados"><input type="checkbox" checked={col.is_unique} onChange={e=>updCol(col.id,'is_unique',e.target.checked)} className="w-4 h-4 rounded accent-bg"/>Unica</label><button onClick={()=>rmCol(col.id)} disabled={cols.length<=1} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600 disabled:opacity-30 ml-auto">&#128465;</button></div>
-          </div>
-        </div>
-        {/* AI Validation Rule */}
-        <div className="ml-0 flex items-center gap-2">
-          <span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; Regra AI:</span>
-          <input value={col.validation_rule} onChange={e=>updCol(col.id,'validation_rule',e.target.value)} placeholder="Ex: deve ser um CPF valido, deve ter pelo menos 3 caracteres..." className="flex-1 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/>
-        </div>
-      </div>)}</div>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"><h3 className="font-semibold">{t.stepColumns}</h3><button onClick={addCol} className="flex items-center gap-1.5 px-3 py-1.5 accent-bg text-white rounded-lg text-sm font-medium">+ {t.add}</button></div>
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">{cols.map((col,i)=><div key={col.id} className="px-6 py-4 space-y-3"><div className="flex items-start gap-3"><div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3">
+        <div className="sm:col-span-4"><input value={col.name} onChange={e=>updCol(col.id,'name',e.target.value)} placeholder={`${t.colName} ${i+1}`} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
+        <div className="sm:col-span-3"><select value={col.data_type} onChange={e=>updCol(col.id,'data_type',e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select></div>
+        <div className="sm:col-span-4 flex items-center gap-3"><label className="flex items-center gap-1 text-sm cursor-pointer"><input type="checkbox" checked={col.is_required} onChange={e=>updCol(col.id,'is_required',e.target.checked)} className="w-4 h-4 rounded"/>{t.required}</label><label className="flex items-center gap-1 text-sm cursor-pointer"><input type="checkbox" checked={col.is_unique} onChange={e=>updCol(col.id,'is_unique',e.target.checked)} className="w-4 h-4 rounded accent-bg"/>{t.unique}</label></div>
+        <div className="sm:col-span-1 flex items-center"><button onClick={()=>rmCol(col.id)} disabled={cols.length<=1} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600 disabled:opacity-30">&#128465;</button></div>
+      </div></div><div className="flex items-center gap-2"><span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; {t.aiRule}</span><input value={col.validation_rule} onChange={e=>updCol(col.id,'validation_rule',e.target.value)} placeholder={t.aiRulePh} className="flex-1 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div></div>)}</div>
     </div>}
-
     {step===3&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-6">
       <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl" style={{backgroundColor:color}}>{name.substring(0,2).toUpperCase()}</div><div><h3 className="text-xl font-bold">{name}</h3>{desc&&<p className="text-gray-500 dark:text-gray-400 text-sm">{desc}</p>}</div></div>
-      <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"><thead className="bg-gray-50 dark:bg-gray-800"><tr><th className="text-left px-4 py-2.5">#</th><th className="text-left px-4 py-2.5">Nome</th><th className="text-left px-4 py-2.5">Tipo</th><th className="text-left px-4 py-2.5">Regra AI</th></tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{cols.map((c,i)=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<tr key={c.id}><td className="px-4 py-2.5 text-gray-400">{i+1}</td><td className="px-4 py-2.5 font-medium">{c.name}{c.is_required&&<span className="text-rose-500 ml-1">*</span>}{c.is_unique&&<span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">UK</span>}</td><td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dt?.color||''}`}>{dt?.label}</span></td><td className="px-4 py-2.5 text-gray-500 text-xs italic">{c.validation_rule||'—'}</td></tr>})}</tbody></table>
+      <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"><thead className="bg-gray-50 dark:bg-gray-800"><tr><th className="text-left px-4 py-2.5">#</th><th className="text-left px-4 py-2.5">{t.name}</th><th className="text-left px-4 py-2.5">Tipo</th><th className="text-left px-4 py-2.5">{t.aiRule}</th></tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{cols.map((c,i)=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<tr key={c.id}><td className="px-4 py-2.5 text-gray-400">{i+1}</td><td className="px-4 py-2.5 font-medium">{c.name}{c.is_required&&<span className="text-rose-500 ml-1">*</span>}{c.is_unique&&<span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">UK</span>}</td><td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dt?.color||''}`}>{dt?.label}</span></td><td className="px-4 py-2.5 text-gray-500 text-xs italic">{c.validation_rule||'--'}</td></tr>})}</tbody></table>
     </div>}
-
     <div className="flex justify-between mt-6">
-      <button onClick={()=>setStep(step-1)} disabled={step===1} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&larr; Voltar</button>
-      {step<3?<button onClick={()=>setStep(step+1)} disabled={step===1?!name.trim():!cols.every(c=>c.name.trim())} className="px-5 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">Proximo &rarr;</button>
-      :<button onClick={submit} disabled={busy} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?'Criando...':'✓ Criar Tabela'}</button>}
+      <button onClick={()=>setStep(step-1)} disabled={step===1} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&larr; {t.back}</button>
+      {step<3?<button onClick={()=>setStep(step+1)} disabled={step===1?!name.trim():!cols.every(c=>c.name.trim())} className="px-5 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">{t.next} &rarr;</button>
+      :<button onClick={submit} disabled={busy} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?t.creating:'✓ '+t.createBtn}</button>}
     </div>
   </div>
 }
 
-// ====== TABLE VIEW ======
+// ====== VIEW ======
 function CrudView({id,onNav}){
-  const{add}=useToast();
-  const[crud,setCrud]=useState(null);
-  const[data,setData]=useState(null);
-  const[search,setSearch]=useState('');
-  const[searchInput,setSearchInput]=useState('');
-  const[page,setPage]=useState(1);
-  const[sortBy,setSortBy]=useState('_created_at');
-  const[sortDir,setSortDir]=useState('desc');
-  const[adding,setAdding]=useState(false);
-  const[editId,setEditId]=useState(null);
-  const[form,setForm]=useState({});
-  const[delId,setDelId]=useState(null);
-  const[selected,setSelected]=useState(new Set());
-  const[batchDel,setBatchDel]=useState(false);
-  const aiVal=useAIValidation();
-
-  useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error','Tabela nao encontrada'))},[id]);
-  const loadData=useCallback(()=>{if(!crud)return;api(`/cruds/${id}/data?search=${encodeURIComponent(search)}&page=${page}&sort_by=${sortBy}&sort_dir=${sortDir}`).then(setData).catch(()=>add('error','Erro ao carregar'))},[crud,search,page,sortBy,sortDir]);
+  const{t}=useI18n();const{add}=useToast();const aiVal=useAIValidation();
+  const[crud,setCrud]=useState(null);const[data,setData]=useState(null);const[search,setSearch]=useState('');const[searchInput,setSearchInput]=useState('');
+  const[page,setPage]=useState(1);const[sortBy,setSortBy]=useState('_created_at');const[sortDir,setSortDir]=useState('desc');
+  const[adding,setAdding]=useState(false);const[editId,setEditId]=useState(null);const[form,setForm]=useState({});
+  const[delId,setDelId]=useState(null);const[selected,setSelected]=useState(new Set());const[batchDel,setBatchDel]=useState(false);
+  useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error',t.errNotFound))},[id]);
+  const loadData=useCallback(()=>{if(!crud)return;api(`/cruds/${id}/data?search=${encodeURIComponent(search)}&page=${page}&sort_by=${sortBy}&sort_dir=${sortDir}`).then(setData).catch(()=>add('error',t.errLoad))},[crud,search,page,sortBy,sortDir]);
   useEffect(()=>{loadData()},[loadData]);
-  useEffect(()=>{const t=setTimeout(()=>{setSearch(searchInput);setPage(1)},300);return()=>clearTimeout(t)},[searchInput]);
-
-  const cols=crud?.columns||[];
-  const rows=data?.data||[];
-
+  useEffect(()=>{const tm=setTimeout(()=>{setSearch(searchInput);setPage(1)},300);return()=>clearTimeout(tm)},[searchInput]);
+  const cols=crud?.columns||[];const rows=data?.data||[];
   const startAdd=()=>{setAdding(true);setEditId(null);setForm({});aiVal.clear()};
   const startEdit=row=>{setEditId(row._id);setAdding(false);const f={};cols.forEach(c=>{f[c.db_column]=row[c.db_column]!=null?String(row[c.db_column]):''});setForm(f);aiVal.clear()};
   const cancel=()=>{setAdding(false);setEditId(null);setForm({});aiVal.clear()};
-  const saveAdd=async()=>{try{await api(`/cruds/${id}/data`,{method:'POST',body:JSON.stringify({data:form})});add('success','Adicionado');cancel();loadData()}catch(e){add('error',e.message)}};
-  const saveEdit=async()=>{try{await api(`/cruds/${id}/data/${editId}`,{method:'PUT',body:JSON.stringify({data:form})});add('success','Atualizado');cancel();loadData()}catch(e){add('error',e.message)}};
-  const handleDel=async()=>{try{await api(`/cruds/${id}/data/${delId}`,{method:'DELETE'});add('success','Excluido');loadData()}catch{add('error','Erro')}setDelId(null)};
-  const handleBatchDel=async()=>{try{await api(`/cruds/${id}/data/batch-delete`,{method:'POST',body:JSON.stringify(Array.from(selected))});add('success',`${selected.size} excluidos`);setSelected(new Set());loadData()}catch{add('error','Erro')}setBatchDel(false)};
-  const handleExport=async()=>{try{const exp=await api(`/cruds/${id}/export`);const ws=XLSX.utils.json_to_sheet(exp.data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,crud?.name||'Dados');XLSX.writeFile(wb,`${crud?.name||'export'}.xlsx`);add('success','Exportado')}catch{add('error','Erro ao exportar')}};
+  const saveAdd=async()=>{try{await api(`/cruds/${id}/data`,{method:'POST',body:JSON.stringify({data:form})});add('success',t.added);cancel();loadData()}catch(e){add('error',e.message)}};
+  const saveEdit=async()=>{try{await api(`/cruds/${id}/data/${editId}`,{method:'PUT',body:JSON.stringify({data:form})});add('success',t.updated);cancel();loadData()}catch(e){add('error',e.message)}};
+  const handleDel=async()=>{try{await api(`/cruds/${id}/data/${delId}`,{method:'DELETE'});add('success',t.deleted);loadData()}catch{add('error','Err')}setDelId(null)};
+  const handleBatchDel=async()=>{try{await api(`/cruds/${id}/data/batch-delete`,{method:'POST',body:JSON.stringify(Array.from(selected))});add('success',`${selected.size} ${t.deleted}`);setSelected(new Set());loadData()}catch{add('error','Err')}setBatchDel(false)};
+  const handleExport=async()=>{try{const exp=await api(`/cruds/${id}/export`);const ws=XLSX.utils.json_to_sheet(exp.data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,crud?.name||'Data');XLSX.writeFile(wb,`${crud?.name||'export'}.xlsx`);add('success',t.exported)}catch{add('error',t.errExport)}};
   const toggleSort=col=>{if(sortBy===col)setSortDir(d=>d==='asc'?'desc':'asc');else{setSortBy(col);setSortDir('asc')}};
   const toggleSel=rid=>{setSelected(prev=>{const n=new Set(prev);n.has(rid)?n.delete(rid):n.add(rid);return n})};
-
-  // Handle field change + AI validation
-  const handleFieldChange=(col,val)=>{
-    setForm({...form,[col.db_column]:val});
-    if(col.validation_rule&&val){
-      // Debounce AI validation
-      clearTimeout(window['_aiv_'+col.db_column]);
-      window['_aiv_'+col.db_column]=setTimeout(()=>{
-        aiVal.validate(col.db_column,val,col.validation_rule,col.name);
-      },800);
-    }
-  };
-
+  const handleFieldChange=(col,val)=>{setForm({...form,[col.db_column]:val});if(col.validation_rule&&val){clearTimeout(window['_aiv_'+col.db_column]);window['_aiv_'+col.db_column]=setTimeout(()=>{aiVal.validate(col.db_column,val,col.validation_rule,col.name)},800)}};
   const renderInput=col=>{const v=form[col.db_column]||'';
-    const input=(()=>{
-      if(col.data_type==='boolean')return<select value={v} onChange={e=>handleFieldChange(col,e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"><option value="">--</option><option value="true">Sim</option><option value="false">Nao</option></select>;
+    const inp=(()=>{if(col.data_type==='boolean')return<select value={v} onChange={e=>handleFieldChange(col,e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"><option value="">--</option><option value="true">{t.yes}</option><option value="false">{t.no}</option></select>;
       const type=col.data_type==='date'?'date':col.data_type==='datetime'?'datetime-local':col.data_type==='integer'||col.data_type==='decimal'?'number':'text';
-      return<input type={type} step={col.data_type==='decimal'?'0.01':undefined} value={v} onChange={e=>handleFieldChange(col,e.target.value)} placeholder={col.name} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"/>
-    })();
-    return <div>{input}{col.validation_rule&&<ValidationBadge result={aiVal.results[col.db_column]} loading={aiVal.loading[col.db_column]}/>}</div>;
-  };
-
+      return<input type={type} step={col.data_type==='decimal'?'0.01':undefined} value={v} onChange={e=>handleFieldChange(col,e.target.value)} placeholder={col.name} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"/>})();
+    return <div>{inp}{col.validation_rule&&<ValidationBadge result={aiVal.results[col.db_column]} loading={aiVal.loading[col.db_column]}/>}</div>};
   if(!crud)return<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>;
-
   return <div className="animate-fade-in space-y-4">
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div className="flex items-center gap-4">
-        <button onClick={()=>onNav('home')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&larr;</button>
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div>
-        <div><h1 className="text-2xl font-bold">{crud.name}</h1>{crud.description&&<p className="text-gray-500 dark:text-gray-400 text-sm">{crud.description}</p>}</div>
-      </div>
+      <div className="flex items-center gap-4"><button onClick={()=>onNav('home')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&larr;</button><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div><div><h1 className="text-2xl font-bold">{crud.name}</h1>{crud.description&&<p className="text-gray-500 dark:text-gray-400 text-sm">{crud.description}</p>}</div></div>
       <div className="flex items-center gap-2">
-        <button onClick={()=>onNav('import',id)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">&#128462; Importar</button>
-        <button onClick={handleExport} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">&#11015; Exportar</button>
-        <button onClick={()=>onNav('edit',id)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">&#9881; Editar</button>
-      </div>
-    </div>
-
+        <button onClick={()=>onNav('import',id)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">{t.import_}</button>
+        <button onClick={handleExport} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">{t.export_}</button>
+        <button onClick={()=>onNav('edit',id)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">{t.edit}</button>
+      </div></div>
     <div className="flex items-center gap-3">
-      <div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span><input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder="Buscar em todos os campos..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
-      <button onClick={startAdd} className="px-4 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">+ Adicionar</button>
+      <div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span><input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder={t.searchAll} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
+      <button onClick={startAdd} className="px-4 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">+ {t.add}</button>
       {selected.size>0&&<button onClick={()=>setBatchDel(true)} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-medium">&#128465; ({selected.size})</button>}
     </div>
-
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
       <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-800"><tr>
         <th className="w-10 px-4 py-3"><input type="checkbox" checked={rows.length>0&&selected.size===rows.length} onChange={()=>{if(selected.size===rows.length)setSelected(new Set());else setSelected(new Set(rows.map(r=>r._id)))}}/></th>
-        {cols.map(c=><th key={c.id} className="text-left px-4 py-3 font-medium cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700" onClick={()=>toggleSort(c.db_column)}><span className="flex items-center gap-1">{c.name}{c.validation_rule&&<span title={'Regra: '+c.validation_rule} className="text-indigo-400 text-xs">&#9889;</span>}<span className={sortBy===c.db_column?'text-indigo-500':'text-gray-300'}>{sortDir==='asc'&&sortBy===c.db_column?'↑':'↓'}</span></span></th>)}
-        <th className="w-24 px-4 py-3 text-right font-medium">Acoes</th>
+        {cols.map(c=><th key={c.id} className="text-left px-4 py-3 font-medium cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700" onClick={()=>toggleSort(c.db_column)}><span className="flex items-center gap-1">{c.name}{c.validation_rule&&<span className="text-indigo-400 text-xs">&#9889;</span>}<span className={sortBy===c.db_column?'text-indigo-500':'text-gray-300'}>{sortDir==='asc'&&sortBy===c.db_column?'↑':'↓'}</span></span></th>)}
+        <th className="w-24 px-4 py-3 text-right font-medium"></th>
       </tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">
         {adding&&<tr className="bg-indigo-50/50 dark:bg-indigo-950/20"><td className="px-4 py-2"/>{cols.map(c=><td key={c.id} className="px-4 py-2">{renderInput(c)}</td>)}<td className="px-4 py-2 text-right"><button onClick={saveAdd} className="p-1.5 rounded-lg bg-emerald-600 text-white mr-1">✓</button><button onClick={cancel} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">✕</button></td></tr>}
         {rows.map(row=><tr key={row._id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${selected.has(row._id)?'bg-indigo-50/30 dark:bg-indigo-950/10':''}`}>
           <td className="px-4 py-2.5"><input type="checkbox" checked={selected.has(row._id)} onChange={()=>toggleSel(row._id)}/></td>
-          {cols.map(c=><td key={c.id} className="px-4 py-2.5">{editId===row._id?renderInput(c):c.data_type==='boolean'?<span className={`px-2 py-0.5 rounded-full text-xs font-medium ${row[c.db_column]?'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400':'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>{row[c.db_column]?'Sim':'Nao'}</span>:<span className="truncate max-w-xs inline-block">{row[c.db_column]!=null?String(row[c.db_column]):'-'}</span>}</td>)}
+          {cols.map(c=><td key={c.id} className="px-4 py-2.5">{editId===row._id?renderInput(c):c.data_type==='boolean'?<span className={`px-2 py-0.5 rounded-full text-xs font-medium ${row[c.db_column]?'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400':'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>{row[c.db_column]?t.yes:t.no}</span>:<span className="truncate max-w-xs inline-block">{row[c.db_column]!=null?String(row[c.db_column]):'-'}</span>}</td>)}
           <td className="px-4 py-2.5 text-right">{editId===row._id?<span><button onClick={saveEdit} className="p-1.5 rounded-lg bg-emerald-600 text-white mr-1">✓</button><button onClick={cancel} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">✕</button></span>:<span><button onClick={()=>startEdit(row)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">&#9998;</button><button onClick={()=>setDelId(row._id)} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600">&#128465;</button></span>}</td>
         </tr>)}
-        {rows.length===0&&!adding&&<tr><td colSpan={cols.length+2} className="px-4 py-12 text-center text-gray-400">{search?'Nenhum resultado':'Nenhum registro. Clique em "Adicionar".'}</td></tr>}
+        {rows.length===0&&!adding&&<tr><td colSpan={cols.length+2} className="px-4 py-12 text-center text-gray-400">{search?t.noResults:t.noData}</td></tr>}
       </tbody></table></div>
-      {data&&data.total_pages>1&&<div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-sm"><span className="text-gray-500">{data.total.toLocaleString('pt-BR')} registro(s)</span><div className="flex items-center gap-2"><button onClick={()=>setPage(p=>p-1)} disabled={page<=1} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&laquo;</button><span>{page}/{data.total_pages}</span><button onClick={()=>setPage(p=>p+1)} disabled={page>=data.total_pages} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&raquo;</button></div></div>}
+      {data&&data.total_pages>1&&<div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-sm"><span className="text-gray-500">{data.total.toLocaleString()} {t.record}</span><div className="flex items-center gap-2"><button onClick={()=>setPage(p=>p-1)} disabled={page<=1} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&laquo;</button><span>{page}/{data.total_pages}</span><button onClick={()=>setPage(p=>p+1)} disabled={page>=data.total_pages} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30">&raquo;</button></div></div>}
     </div>
-    <Confirm open={delId!==null} title="Excluir registro" msg="Tem certeza?" danger onOk={handleDel} onCancel={()=>setDelId(null)}/>
-    <Confirm open={batchDel} title="Excluir registros" msg={`Excluir ${selected.size} registro(s)?`} danger onOk={handleBatchDel} onCancel={()=>setBatchDel(false)}/>
+    <Confirm open={delId!==null} title={t.deleteRecord} msg={t.deleteRecordMsg} danger onOk={handleDel} onCancel={()=>setDelId(null)}/>
+    <Confirm open={batchDel} title={t.deleteRecords} msg={`${t.delete_} ${selected.size} ${t.record}?`} danger onOk={handleBatchDel} onCancel={()=>setBatchDel(false)}/>
   </div>
 }
 
-// ====== EDIT TABLE ======
+// ====== EDIT ======
 function EditCrud({id,onNav}){
-  const{add}=useToast();
-  const[crud,setCrud]=useState(null);
-  const[name,setName]=useState('');
-  const[desc,setDesc]=useState('');
-  const[color,setColor]=useState('#6366f1');
-  const[newCol,setNewCol]=useState('');
-  const[newType,setNewType]=useState('text');
-  const[newRule,setNewRule]=useState('');
-  const[newReq,setNewReq]=useState(false);
-  const[newUniq,setNewUniq]=useState(false);
-  const[delCol,setDelCol]=useState(null);
-
-  const load=()=>api(`/cruds/${id}`).then(c=>{setCrud(c);setName(c.name);setDesc(c.description);setColor(c.color)}).catch(()=>add('error','Nao encontrada'));
+  const{t}=useI18n();const{add}=useToast();
+  const[crud,setCrud]=useState(null);const[name,setName]=useState('');const[desc,setDesc]=useState('');const[color,setColor]=useState('#6366f1');
+  const[newCol,setNewCol]=useState('');const[newType,setNewType]=useState('text');const[newRule,setNewRule]=useState('');const[newReq,setNewReq]=useState(false);const[newUniq,setNewUniq]=useState(false);const[delCol,setDelCol]=useState(null);
+  const load=()=>api(`/cruds/${id}`).then(c=>{setCrud(c);setName(c.name);setDesc(c.description);setColor(c.color)}).catch(()=>add('error',t.errNotFound));
   useEffect(()=>{load()},[id]);
-
-  const save=async()=>{try{await api(`/cruds/${id}`,{method:'PUT',body:JSON.stringify({name:name.trim(),description:desc.trim(),color})});add('success','Tabela atualizada');onNav('view',id)}catch(e){add('error',e.message)}};
-  const addCol=async()=>{if(!newCol.trim())return;try{await api(`/cruds/${id}/columns`,{method:'POST',body:JSON.stringify({name:newCol.trim(),data_type:newType,is_required:newReq,is_unique:newUniq,validation_rule:newRule})});add('success',`Coluna "${newCol}" adicionada`);setNewCol('');setNewRule('');setNewReq(false);setNewUniq(false);load()}catch(e){add('error',e.message)}};
-  const rmCol=async()=>{if(!delCol)return;try{await api(`/cruds/${id}/columns/${delCol.id}`,{method:'DELETE'});add('success','Coluna removida');load()}catch(e){add('error',e.message)}setDelCol(null)};
-  const updateColRule=async(col,rule)=>{try{await api(`/cruds/${id}/columns/${col.id}`,{method:'PUT',body:JSON.stringify({validation_rule:rule})});add('success','Regra atualizada');load()}catch(e){add('error',e.message)}};
-
+  const save=async()=>{try{await api(`/cruds/${id}`,{method:'PUT',body:JSON.stringify({name:name.trim(),description:desc.trim(),color})});add('success',t.tableUpdated);onNav('view',id)}catch(e){add('error',e.message)}};
+  const addC=async()=>{if(!newCol.trim())return;try{await api(`/cruds/${id}/columns`,{method:'POST',body:JSON.stringify({name:newCol.trim(),data_type:newType,is_required:newReq,is_unique:newUniq,validation_rule:newRule})});add('success',`"${newCol}" ${t.colAdded}`);setNewCol('');setNewRule('');setNewReq(false);setNewUniq(false);load()}catch(e){add('error',e.message)}};
+  const rmC=async()=>{if(!delCol)return;try{await api(`/cruds/${id}/columns/${delCol.id}`,{method:'DELETE'});add('success',t.colRemoved);load()}catch(e){add('error',e.message)}setDelCol(null)};
+  const updateRule=async(col,rule)=>{try{await api(`/cruds/${id}/columns/${col.id}`,{method:'PUT',body:JSON.stringify({validation_rule:rule})});add('success',t.ruleUpdated);load()}catch(e){add('error',e.message)}};
   if(!crud)return<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>;
-
   return <div className="max-w-3xl mx-auto animate-fade-in">
-    <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar</button>
-    <h1 className="text-2xl font-bold mb-6">Editar Tabela</h1>
+    <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; {t.back}</button>
+    <h1 className="text-2xl font-bold mb-6">{t.editTable}</h1>
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-5 mb-6">
-      <div><label className="block text-sm font-medium mb-2">Nome</label><input value={name} onChange={e=>setName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
-      <div><label className="block text-sm font-medium mb-2">Descricao</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"/></div>
-      <div><label className="block text-sm font-medium mb-3">Cor</label><div className="flex flex-wrap gap-2">{COLORS.map(c=><button key={c} onClick={()=>setColor(c)} className={`w-9 h-9 rounded-xl transition-all ${color===c?'ring-2 ring-offset-2 ring-gray-400 scale-110':'hover:scale-105'}`} style={{backgroundColor:c}}/>)}</div></div>
-      <button onClick={save} disabled={!name.trim()} className="px-5 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">&#128190; Salvar</button>
+      <h2 className="font-semibold text-lg">{t.generalInfo}</h2>
+      <div><label className="block text-sm font-medium mb-2">{t.name}</label><input value={name} onChange={e=>setName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"/></div>
+      <div><label className="block text-sm font-medium mb-2">{t.description}</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"/></div>
+      <div><label className="block text-sm font-medium mb-3">{t.color}</label><div className="flex flex-wrap gap-2">{COLORS.map(c=><button key={c} onClick={()=>setColor(c)} className={`w-9 h-9 rounded-xl transition-all ${color===c?'ring-2 ring-offset-2 ring-gray-400 scale-110':'hover:scale-105'}`} style={{backgroundColor:c}}/>)}</div></div>
+      <button onClick={save} disabled={!name.trim()} className="px-5 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">{t.save}</button>
     </div>
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800"><h2 className="font-semibold text-lg">Colunas ({crud.columns.length})</h2></div>
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">{crud.columns.map(c=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<div key={c.id} className="px-6 py-3 space-y-2">
-        <div className="flex items-center gap-3">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${dt?.color||''}`}>{dt?.label}</span>
-          <span className="flex-1 font-medium text-sm">{c.name}{c.is_unique&&<span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">UK</span>}</span>
-          <span className="text-xs text-gray-400 font-mono">{c.db_column}</span>
-          <button onClick={()=>setDelCol(c)} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600">&#128465;</button>
-        </div>
-        {/* Editable AI rule */}
-        <div className="flex items-center gap-2 ml-0">
-          <span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; Regra AI:</span>
-          <input defaultValue={c.validation_rule||''} onBlur={e=>{if(e.target.value!==(c.validation_rule||''))updateColRule(c,e.target.value)}} placeholder="Ex: deve ser um email valido..." className="flex-1 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300"/>
-        </div>
-      </div>})}</div>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800"><h2 className="font-semibold text-lg">{t.columns} ({crud.columns.length})</h2></div>
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">{crud.columns.map(c=>{const dt=DATA_TYPES.find(d=>d.value===c.data_type);return<div key={c.id} className="px-6 py-3 space-y-2"><div className="flex items-center gap-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${dt?.color||''}`}>{dt?.label}</span><span className="flex-1 font-medium text-sm">{c.name}{c.is_unique&&<span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">UK</span>}</span><span className="text-xs text-gray-400 font-mono">{c.db_column}</span><button onClick={()=>setDelCol(c)} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950 text-gray-400 hover:text-rose-600">&#128465;</button></div>
+        <div className="flex items-center gap-2"><span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; {t.aiRule}</span><input defaultValue={c.validation_rule||''} onBlur={e=>{if(e.target.value!==(c.validation_rule||''))updateRule(c,e.target.value)}} placeholder={t.aiRulePh} className="flex-1 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300"/></div></div>})}</div>
       <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 space-y-3">
-        <h3 className="text-sm font-medium">Nova coluna</h3>
-        <div className="flex items-end gap-3 flex-wrap">
-          <input value={newCol} onChange={e=>setNewCol(e.target.value)} placeholder="Nome" className="flex-1 min-w-[150px] px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/>
-          <select value={newType} onChange={e=>setNewType(e.target.value)} className="w-32 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select>
-          <label className="flex items-center gap-1 text-sm shrink-0"><input type="checkbox" checked={newReq} onChange={e=>setNewReq(e.target.checked)} className="w-4 h-4 rounded"/>Obrig.</label>
-          <label className="flex items-center gap-1 text-sm shrink-0"><input type="checkbox" checked={newUniq} onChange={e=>setNewUniq(e.target.checked)} className="w-4 h-4 rounded"/>Unica</label>
-          <button onClick={addCol} disabled={!newCol.trim()} className="px-4 py-2 accent-bg text-white rounded-lg text-sm font-medium disabled:opacity-50 shrink-0">+ Adicionar</button>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; Regra AI:</span>
-          <input value={newRule} onChange={e=>setNewRule(e.target.value)} placeholder="Ex: deve conter apenas numeros..." className="flex-1 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"/>
-        </div>
-      </div>
-    </div>
-    <Confirm open={!!delCol} title="Remover coluna" msg={`Remover "${delCol?.name}"? Dados preservados mas nao visiveis.`} danger onOk={rmCol} onCancel={()=>setDelCol(null)}/>
+        <h3 className="text-sm font-medium">{t.newColumn}</h3>
+        <div className="flex items-end gap-3 flex-wrap"><input value={newCol} onChange={e=>setNewCol(e.target.value)} placeholder={t.colName} className="flex-1 min-w-[150px] px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"/><select value={newType} onChange={e=>setNewType(e.target.value)} className="w-32 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">{DATA_TYPES.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}</select>
+          <label className="flex items-center gap-1 text-sm shrink-0"><input type="checkbox" checked={newReq} onChange={e=>setNewReq(e.target.checked)} className="w-4 h-4 rounded"/>{t.required}</label>
+          <label className="flex items-center gap-1 text-sm shrink-0"><input type="checkbox" checked={newUniq} onChange={e=>setNewUniq(e.target.checked)} className="w-4 h-4 rounded"/>{t.unique}</label>
+          <button onClick={addC} disabled={!newCol.trim()} className="px-4 py-2 accent-bg text-white rounded-lg text-sm font-medium disabled:opacity-50">+ {t.add}</button></div>
+        <div className="flex items-center gap-2"><span className="text-xs text-indigo-500 font-medium shrink-0">&#9889; {t.aiRule}</span><input value={newRule} onChange={e=>setNewRule(e.target.value)} placeholder={t.aiRulePh} className="flex-1 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"/></div>
+      </div></div>
+    <Confirm open={!!delCol} title={t.removeCol} msg={`"${delCol?.name}": ${t.removeColMsg}`} danger onOk={rmC} onCancel={()=>setDelCol(null)}/>
   </div>
 }
 
-// ====== CSV PARSER (auto-detect separator + line break) ======
-function parseCSV(text){
-  // Detect separator: try ;  ,  |  \t - pick the one that gives most consistent column count
-  const separators=[';',',','|','\t'];
-  const lines=text.split(/\r?\n/).filter(l=>l.trim());
-  if(!lines.length)return{headers:[],rows:[]};
-  let bestSep=',',bestScore=0;
-  for(const sep of separators){
-    const counts=lines.slice(0,5).map(l=>l.split(sep).length);
-    const consistent=counts.every(c=>c===counts[0])&&counts[0]>1;
-    const score=consistent?counts[0]*10:counts[0];
-    if(score>bestScore){bestScore=score;bestSep=sep}
-  }
-  const headers=lines[0].split(bestSep).map(h=>h.trim().replace(/^["']|["']$/g,''));
-  const rows=[];
-  for(let i=1;i<lines.length;i++){
-    const vals=lines[i].split(bestSep).map(v=>v.trim().replace(/^["']|["']$/g,''));
-    const row={};headers.forEach((h,j)=>{row[h]=vals[j]||''});
-    rows.push(row);
-  }
-  return{headers,rows,separator:bestSep};
-}
-
-// ====== IMPORT DATA ======
+// ====== IMPORT ======
 function ImportData({id,onNav}){
-  const{add}=useToast();
-  const fileRef=useRef();
-  const[crud,setCrud]=useState(null);
-  const[fileData,setFileData]=useState(null);
-  const[mapping,setMapping]=useState({});
-  const[busy,setBusy]=useState(false);
-  const[validating,setValidating]=useState(false);
-  const[step,setStep]=useState('upload');
-  const[result,setResult]=useState(null);
-  const[validation,setValidation]=useState(null);
-
-  useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error','Nao encontrada'))},[id]);
-
-  const processFile=file=>{
-    const isCSV=file.name.match(/\.csv$/i);
-    const isXLS=file.name.match(/\.xlsx?$/i);
-    if(!isCSV&&!isXLS){add('error','Formatos aceitos: .xlsx, .csv');return}
-    const reader=new FileReader();
-    reader.onload=e=>{try{
-      let headers,rows;
-      if(isCSV){
-        const text=e.target.result;
-        const parsed=parseCSV(text);
-        headers=parsed.headers;rows=parsed.rows;
-      }else{
-        const wb=XLSX.read(e.target.result,{type:'array'});
-        const ws=wb.Sheets[wb.SheetNames[0]];
-        const json=XLSX.utils.sheet_to_json(ws);
-        if(!json.length){add('error','Arquivo vazio');return}
-        headers=Object.keys(json[0]);rows=json;
-      }
-      if(!headers.length){add('error','Nenhum cabecalho encontrado');return}
-      setFileData({fileName:file.name,headers,rows,sample:rows.slice(0,5)});
-      setStep('map');autoMap(headers);
-    }catch{add('error','Erro ao ler arquivo')}};
-    if(isCSV)reader.readAsText(file);else reader.readAsArrayBuffer(file);
-  };
-
+  const{t}=useI18n();const{add}=useToast();const fileRef=useRef();
+  const[crud,setCrud]=useState(null);const[fileData,setFileData]=useState(null);const[mapping,setMapping]=useState({});
+  const[busy,setBusy]=useState(false);const[validating,setValidating]=useState(false);const[step,setStep]=useState('upload');const[result,setResult]=useState(null);const[validation,setValidation]=useState(null);
+  useEffect(()=>{api(`/cruds/${id}`).then(setCrud).catch(()=>add('error',t.errNotFound))},[id]);
+  const processFile=file=>{const isCSV=file.name.match(/\.csv$/i);const isXLS=file.name.match(/\.xlsx?$/i);if(!isCSV&&!isXLS){add('error','xlsx/csv only');return}
+    const reader=new FileReader();reader.onload=e=>{try{let headers,rows;if(isCSV){const p=parseCSV(e.target.result);headers=p.headers;rows=p.rows}else{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const json=XLSX.utils.sheet_to_json(ws);if(!json.length){add('error','Empty');return}headers=Object.keys(json[0]);rows=json}if(!headers.length){add('error','No headers');return}setFileData({fileName:file.name,headers,rows,sample:rows.slice(0,5)});setStep('map');autoMap(headers)}catch{add('error','Read error')}};if(isCSV)reader.readAsText(file);else reader.readAsArrayBuffer(file)};
   const autoMap=hdrs=>{if(!crud)return;const m={};crud.columns.forEach(c=>{const cl=c.name.toLowerCase().replace(/\s+/g,'');const match=hdrs.find(h=>{const hl=h.toLowerCase().replace(/\s+/g,'');return hl===cl||hl.includes(cl)||cl.includes(hl)});if(match)m[c.db_column]=match});setMapping(m)};
-
-  const doValidate=async()=>{
-    setValidating(true);
-    try{
-      const model=localStorage.getItem('dbx-ai-model')||'';
-      const res=await api(`/cruds/${id}/import/validate`,{method:'POST',body:JSON.stringify({mapping,rows:fileData.rows,model})});
-      setValidation(res);setStep('validate');
-    }catch(e){add('error',e.message)}
-    finally{setValidating(false)}
-  };
-
-  const doImport=async(onlyValid=false)=>{
-    const rowsToImport=onlyValid&&validation?fileData.rows.filter((_,i)=>validation.rows[i]?.valid):fileData.rows;
-    setBusy(true);
-    try{const r=await api(`/cruds/${id}/import`,{method:'POST',body:JSON.stringify({mapping,rows:rowsToImport})});setResult(r);setStep('done');add('success',r.message)}catch(e){add('error',e.message)}finally{setBusy(false)}
-  };
-
-  const mapped=Object.values(mapping).filter(Boolean).length;
-  const reset=()=>{setStep('upload');setFileData(null);setMapping({});setResult(null);setValidation(null)};
-
+  const doValidate=async()=>{setValidating(true);try{const model=localStorage.getItem('dbx-ai-model')||'';const res=await api(`/cruds/${id}/import/validate`,{method:'POST',body:JSON.stringify({mapping,rows:fileData.rows,model})});setValidation(res);setStep('validate')}catch(e){add('error',e.message)}finally{setValidating(false)}};
+  const doImport=async(onlyValid)=>{const rowsI=onlyValid&&validation?fileData.rows.filter((_,i)=>validation.rows[i]?.valid):fileData.rows;setBusy(true);try{const r=await api(`/cruds/${id}/import`,{method:'POST',body:JSON.stringify({mapping,rows:rowsI})});setResult(r);setStep('done');add('success',r.message)}catch(e){add('error',e.message)}finally{setBusy(false)}};
+  const mapped=Object.values(mapping).filter(Boolean).length;const reset=()=>{setStep('upload');setFileData(null);setMapping({});setResult(null);setValidation(null)};
   if(!crud)return<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>;
-
+  const steps=[t.stUpload,t.stMap,t.stValidate,t.stImport];const stepsK=['upload','map','validate','done'];const idx=stepsK.indexOf(step);
   return <div className="max-w-4xl mx-auto animate-fade-in">
-    <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar para {crud.name}</button>
-    <div className="flex items-center gap-4 mb-6"><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div><div><h1 className="text-2xl font-bold">Importar dados</h1><p className="text-gray-500 dark:text-gray-400 text-sm">Excel ou CSV para "{crud.name}"</p></div></div>
-
-    {/* Steps indicator */}
-    <div className="flex items-center gap-2 mb-6">{['Upload','Mapear','Validar','Importar'].map((s,i)=>{const steps=['upload','map','validate','done'];const idx=steps.indexOf(step);return<div key={s} className="flex items-center gap-2"><div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${i<=idx?'accent-bg text-white':'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>{i<idx?'✓':i+1}</div><span className="text-xs hidden sm:inline text-gray-500">{s}</span>{i<3&&<div className="w-6 h-px bg-gray-300 dark:bg-gray-700"/>}</div>})}</div>
-
-    {/* Step 1: Upload */}
-    {step==='upload'&&<div onDragOver={e=>{e.preventDefault()}} onDrop={e=>{e.preventDefault();processFile(e.dataTransfer.files[0])}} className="border-2 border-dashed rounded-2xl p-12 text-center border-gray-300 dark:border-gray-700 hover:border-gray-400">
-      <div className="text-6xl mb-4">&#128462;</div><h3 className="text-lg font-semibold mb-2">Arraste seu arquivo aqui</h3><p className="text-gray-500 dark:text-gray-400 mb-6">Formatos aceitos: .xlsx .csv (separador auto-detectado)</p>
-      <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={e=>e.target.files[0]&&processFile(e.target.files[0])} className="hidden"/>
-      <button onClick={()=>fileRef.current.click()} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium hover:opacity-90">Selecionar arquivo</button>
-    </div>}
-
-    {/* Step 2: Map */}
+    <button onClick={()=>onNav('view',id)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; {t.back} {crud.name}</button>
+    <div className="flex items-center gap-4 mb-6"><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" style={{backgroundColor:crud.color}}>{crud.name.substring(0,2).toUpperCase()}</div><div><h1 className="text-2xl font-bold">{t.importTitle}</h1><p className="text-gray-500 dark:text-gray-400 text-sm">{t.importSub} "{crud.name}"</p></div></div>
+    <div className="flex items-center gap-2 mb-6">{steps.map((s,i)=><div key={s} className="flex items-center gap-2"><div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${i<=idx?'accent-bg text-white':'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>{i<idx?'✓':i+1}</div><span className="text-xs hidden sm:inline text-gray-500">{s}</span>{i<3&&<div className="w-6 h-px bg-gray-300 dark:bg-gray-700"/>}</div>)}</div>
+    {step==='upload'&&<div onDragOver={e=>{e.preventDefault()}} onDrop={e=>{e.preventDefault();processFile(e.dataTransfer.files[0])}} className="border-2 border-dashed rounded-2xl p-12 text-center border-gray-300 dark:border-gray-700 hover:border-gray-400"><div className="text-6xl mb-4">&#128462;</div><h3 className="text-lg font-semibold mb-2">{t.dragFile}</h3><p className="text-gray-500 dark:text-gray-400 mb-6">{t.formats}</p><input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={e=>e.target.files[0]&&processFile(e.target.files[0])} className="hidden"/><button onClick={()=>fileRef.current.click()} className="px-5 py-2.5 accent-bg text-white rounded-xl font-medium hover:opacity-90">{t.selectFile}</button></div>}
     {step==='map'&&fileData&&<div className="space-y-6">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between">
-        <div><strong>{fileData.fileName}</strong> — {fileData.rows.length.toLocaleString('pt-BR')} linhas, {fileData.headers.length} colunas</div>
-        <button onClick={reset} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">&#10005;</button>
-      </div>
-      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Mapeamento de colunas</h2><button onClick={()=>autoMap(fileData.headers)} className="px-3 py-1.5 text-sm font-medium accent-text hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg">Auto-mapear</button></div>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between"><div><strong>{fileData.fileName}</strong> — {fileData.rows.length.toLocaleString()} {t.lines}, {fileData.headers.length} {t.colNs}</div><button onClick={reset} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">&#10005;</button></div>
+      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{t.colMapping}</h2><button onClick={()=>autoMap(fileData.headers)} className="px-3 py-1.5 text-sm font-medium accent-text hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg">{t.autoMap}</button></div>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="grid grid-cols-12 px-6 py-3 bg-gray-50 dark:bg-gray-800 text-sm font-medium"><div className="col-span-5">Coluna da Tabela</div><div className="col-span-2 text-center">&rarr;</div><div className="col-span-5">Coluna do Arquivo</div></div>
+        <div className="grid grid-cols-12 px-6 py-3 bg-gray-50 dark:bg-gray-800 text-sm font-medium"><div className="col-span-5">{t.tableCol}</div><div className="col-span-2 text-center">&rarr;</div><div className="col-span-5">{t.fileCol}</div></div>
         <div className="divide-y divide-gray-100 dark:divide-gray-800">{crud.columns.map(c=><div key={c.id} className="grid grid-cols-12 items-center px-6 py-3 gap-2">
           <div className="col-span-5 flex items-center gap-2 flex-wrap"><div className="w-2 h-2 rounded-full" style={{backgroundColor:crud.color}}/><span className="font-medium text-sm">{c.name}</span><span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{c.data_type}</span>{c.is_required&&<span className="text-xs text-rose-500">*</span>}{c.is_unique&&<span className="text-xs px-1 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">UK</span>}</div>
           <div className="col-span-2 flex justify-center"><div className={`w-8 h-px ${mapping[c.db_column]?'bg-emerald-400':'bg-gray-300 dark:bg-gray-700'}`}/>{mapping[c.db_column]&&<span className="text-emerald-500 -ml-1">✓</span>}</div>
-          <div className="col-span-5"><select value={mapping[c.db_column]||''} onChange={e=>setMapping({...mapping,[c.db_column]:e.target.value})} className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 ${mapping[c.db_column]?'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20':'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}><option value="">-- Selecione --</option>{fileData.headers.map(h=><option key={h} value={h}>{h}</option>)}</select></div>
-        </div>)}</div>
-      </div>
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500">{mapped===0&&<span className="text-amber-600">Mapeie pelo menos uma coluna</span>}</div>
-        <button onClick={doValidate} disabled={mapped===0||validating} className="px-6 py-2.5 accent-bg text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50">{validating?'Validando...':'Validar '+fileData.rows.length.toLocaleString('pt-BR')+' linhas'}</button>
-      </div>
+          <div className="col-span-5"><select value={mapping[c.db_column]||''} onChange={e=>setMapping({...mapping,[c.db_column]:e.target.value})} className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 ${mapping[c.db_column]?'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20':'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}><option value="">{t.selectCol}</option>{fileData.headers.map(h=><option key={h} value={h}>{h}</option>)}</select></div>
+        </div>)}</div></div>
+      <div className="flex items-center justify-between"><div className="text-sm text-gray-500">{mapped===0&&<span className="text-amber-600">{t.mapHint}</span>}</div><button onClick={doValidate} disabled={mapped===0||validating} className="px-6 py-2.5 accent-bg text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50">{validating?t.validating:`${t.validate} ${fileData.rows.length.toLocaleString()} ${t.lines}`}</button></div>
     </div>}
-
-    {/* Step 3: Validate */}
     {step==='validate'&&validation&&<div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 text-center"><div className="text-2xl font-bold">{validation.total}</div><div className="text-sm text-gray-500">Total</div></div>
-        <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-4 text-center"><div className="text-2xl font-bold text-emerald-600">{validation.valid}</div><div className="text-sm text-emerald-600">Validos</div></div>
-        <div className={`rounded-2xl border p-4 text-center ${validation.invalid>0?'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800':'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}><div className={`text-2xl font-bold ${validation.invalid>0?'text-rose-600':'text-gray-400'}`}>{validation.invalid}</div><div className={`text-sm ${validation.invalid>0?'text-rose-600':'text-gray-400'}`}>Com erro</div></div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 text-center"><div className="text-2xl font-bold">{validation.total}</div><div className="text-sm text-gray-500">{t.total}</div></div>
+        <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-4 text-center"><div className="text-2xl font-bold text-emerald-600">{validation.valid}</div><div className="text-sm text-emerald-600">{t.valid}</div></div>
+        <div className={`rounded-2xl border p-4 text-center ${validation.invalid>0?'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800':'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}><div className={`text-2xl font-bold ${validation.invalid>0?'text-rose-600':'text-gray-400'}`}>{validation.invalid}</div><div className={`text-sm ${validation.invalid>0?'text-rose-600':'text-gray-400'}`}>{t.invalid}</div></div>
       </div>
-
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-800"><h3 className="font-medium">Resultado da validacao</h3></div>
-        <div className="overflow-x-auto max-h-96 overflow-y-auto"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-800 sticky top-0"><tr>
-          <th className="w-10 px-4 py-2 text-left">#</th>
-          <th className="w-10 px-4 py-2 text-center">Status</th>
-          {crud.columns.filter(c=>mapping[c.db_column]).map(c=><th key={c.id} className="text-left px-4 py-2 font-medium">{c.name}</th>)}
-          <th className="text-left px-4 py-2 font-medium">Erros</th>
-        </tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-          {validation.rows.map((vr,i)=><tr key={i} className={vr.valid?'':'bg-rose-50/50 dark:bg-rose-950/10'}>
-            <td className="px-4 py-2 text-gray-400 text-xs">{vr.row}</td>
-            <td className="px-4 py-2 text-center">{vr.valid?<span className="text-emerald-500">&#10003;</span>:<span className="text-rose-500">&#10007;</span>}</td>
-            {crud.columns.filter(c=>mapping[c.db_column]).map(c=><td key={c.id} className="px-4 py-2 text-xs truncate max-w-[150px]">{vr.preview?.[c.name]||'-'}</td>)}
-            <td className="px-4 py-2">{vr.errors.length>0&&<div className="space-y-0.5">{vr.errors.map((e,j)=><div key={j} className="text-xs text-rose-600"><strong>{e.field}:</strong> {e.message}</div>)}</div>}</td>
-          </tr>)}
-        </tbody></table></div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <button onClick={()=>setStep('map')} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800">&larr; Voltar ao mapeamento</button>
-        <div className="flex gap-3">
-          {validation.invalid>0&&validation.valid>0&&<button onClick={()=>doImport(true)} disabled={busy} className="px-5 py-2.5 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 disabled:opacity-50">{busy?'Importando...':'Importar apenas validos ('+validation.valid+')'}</button>}
-          <button onClick={()=>doImport(false)} disabled={busy||validation.valid===0} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?'Importando...':'Importar todos ('+validation.total+')'}</button>
-        </div>
-      </div>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden"><div className="px-6 py-3 border-b border-gray-200 dark:border-gray-800"><h3 className="font-medium">{t.validationResult}</h3></div>
+        <div className="overflow-x-auto max-h-96 overflow-y-auto"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-800 sticky top-0"><tr><th className="w-10 px-4 py-2 text-left">#</th><th className="w-10 px-4 py-2 text-center">{t.status}</th>{crud.columns.filter(c=>mapping[c.db_column]).map(c=><th key={c.id} className="text-left px-4 py-2 font-medium">{c.name}</th>)}<th className="text-left px-4 py-2 font-medium">{t.errors}</th></tr></thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">{validation.rows.map((vr,i)=><tr key={i} className={vr.valid?'':'bg-rose-50/50 dark:bg-rose-950/10'}><td className="px-4 py-2 text-gray-400 text-xs">{vr.row}</td><td className="px-4 py-2 text-center">{vr.valid?<span className="text-emerald-500">&#10003;</span>:<span className="text-rose-500">&#10007;</span>}</td>{crud.columns.filter(c=>mapping[c.db_column]).map(c=><td key={c.id} className="px-4 py-2 text-xs truncate max-w-[150px]">{vr.preview?.[c.name]||'-'}</td>)}<td className="px-4 py-2">{vr.errors.length>0&&<div className="space-y-0.5">{vr.errors.map((e,j)=><div key={j} className="text-xs text-rose-600"><strong>{e.field}:</strong> {e.message}</div>)}</div>}</td></tr>)}</tbody></table></div></div>
+      <div className="flex items-center justify-between"><button onClick={()=>setStep('map')} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800">&larr; {t.backToMap}</button><div className="flex gap-3">{validation.invalid>0&&validation.valid>0&&<button onClick={()=>doImport(true)} disabled={busy} className="px-5 py-2.5 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 disabled:opacity-50">{busy?t.importing:`${t.importOnlyValid} (${validation.valid})`}</button>}<button onClick={()=>doImport(false)} disabled={busy||validation.valid===0} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50">{busy?t.importing:`${t.importAll} (${validation.total})`}</button></div></div>
     </div>}
-
-    {/* Step 4: Done */}
-    {step==='done'&&result&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center">
-      <div className="text-5xl mb-4">&#9989;</div>
-      <h2 className="text-xl font-bold mb-2">Importacao concluida!</h2>
-      <p className="text-gray-500 dark:text-gray-400 mb-6">{result.inserted.toLocaleString('pt-BR')} importados{result.errors>0&&<span className="text-rose-500"> ({result.errors} erros)</span>}</p>
-      <div className="flex items-center justify-center gap-3">
-        <button onClick={reset} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">Importar mais</button>
-        <button onClick={()=>onNav('view',id)} className="px-4 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">Ver dados</button>
-      </div>
-    </div>}
+    {step==='done'&&result&&<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center"><div className="text-5xl mb-4">&#9989;</div><h2 className="text-xl font-bold mb-2">{t.importDone}</h2><p className="text-gray-500 dark:text-gray-400 mb-6">{result.inserted.toLocaleString()} {t.imported}{result.errors>0&&<span className="text-rose-500"> ({result.errors} {t.errors.toLowerCase()})</span>}</p><div className="flex items-center justify-center gap-3"><button onClick={reset} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">{t.importMore}</button><button onClick={()=>onNav('view',id)} className="px-4 py-2.5 accent-bg text-white rounded-xl text-sm font-medium hover:opacity-90">{t.viewData}</button></div></div>}
   </div>
 }
 
 // ====== SETTINGS ======
 function Settings({onNav}){
-  const ACCENTS=[{n:'Indigo',v:'#6366f1'},{n:'Violeta',v:'#8b5cf6'},{n:'Rosa',v:'#ec4899'},{n:'Vermelho',v:'#ef4444'},{n:'Laranja',v:'#f97316'},{n:'Amarelo',v:'#eab308'},{n:'Verde',v:'#22c55e'},{n:'Teal',v:'#14b8a6'},{n:'Ciano',v:'#06b6d4'},{n:'Azul',v:'#3b82f6'},{n:'Slate',v:'#64748b'},{n:'Escuro',v:'#1e293b'}];
+  const{t,lang,changeLang}=useI18n();const{add}=useToast();
+  const ACCENTS=[{n:'Indigo',v:'#6366f1'},{n:'Violeta',v:'#8b5cf6'},{n:'Rosa',v:'#ec4899'},{n:'Red',v:'#ef4444'},{n:'Orange',v:'#f97316'},{n:'Yellow',v:'#eab308'},{n:'Green',v:'#22c55e'},{n:'Teal',v:'#14b8a6'},{n:'Cyan',v:'#06b6d4'},{n:'Blue',v:'#3b82f6'},{n:'Slate',v:'#64748b'},{n:'Dark',v:'#1e293b'}];
   const[theme,setTheme]=useState(localStorage.getItem('dbx-theme')||'light');
   const[accent,setAccent]=useState(localStorage.getItem('dbx-accent')||'#6366f1');
   const[aiModel,setAiModel]=useState(localStorage.getItem('dbx-ai-model')||'');
-  const[models,setModels]=useState([]);
-  const[defaultModel,setDefaultModel]=useState('');
-  const[loadingModels,setLoadingModels]=useState(true);
-  const[tools,setTools]=useState([]);
-  const[loadingTools,setLoadingTools]=useState(true);
-  const{add}=useToast();
-
-  useEffect(()=>{
-    api('/models').then(d=>{setModels(d.models||[]);setDefaultModel(d.default||'');if(!aiModel)setAiModel(d.default||'')}).catch(()=>{}).finally(()=>setLoadingModels(false));
-    api('/tools').then(d=>setTools(d.tools||[])).catch(()=>{}).finally(()=>setLoadingTools(false));
-  },[]);
-
-  const applyTheme=t=>{document.documentElement.classList.toggle('dark',t==='dark');document.body.className=t==='dark'?'bg-gray-950 text-gray-100':'bg-gray-50 text-gray-900';localStorage.setItem('dbx-theme',t);setTheme(t)};
+  const[models,setModels]=useState([]);const[defaultModel,setDefaultModel]=useState('');const[loadingModels,setLoadingModels]=useState(true);
+  const[tools,setTools]=useState([]);const[loadingTools,setLoadingTools]=useState(true);
+  useEffect(()=>{api('/models').then(d=>{setModels(d.models||[]);setDefaultModel(d.default||'');if(!aiModel)setAiModel(d.default||'')}).catch(()=>{}).finally(()=>setLoadingModels(false));api('/tools').then(d=>setTools(d.tools||[])).catch(()=>{}).finally(()=>setLoadingTools(false))},[]);
+  const applyTheme=tm=>{document.documentElement.classList.toggle('dark',tm==='dark');document.body.className=tm==='dark'?'bg-gray-950 text-gray-100':'bg-gray-50 text-gray-900';localStorage.setItem('dbx-theme',tm);setTheme(tm)};
   const applyAccent=c=>{const h=c.replace('#','');const[r,g,b]=[parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];document.documentElement.style.setProperty('--accent',`${r} ${g} ${b}`);localStorage.setItem('dbx-accent',c);setAccent(c)};
-  const applyModel=m=>{localStorage.setItem('dbx-ai-model',m);setAiModel(m);add('success',`Modelo alterado para ${m}`)};
-
+  const applyModel=m=>{localStorage.setItem('dbx-ai-model',m);setAiModel(m);add('success',`${t.modelChanged} ${m}`)};
   return <div className="max-w-2xl mx-auto animate-fade-in">
-    <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; Voltar</button>
-    <h1 className="text-2xl font-bold mb-2">Configuracoes</h1><p className="text-gray-500 dark:text-gray-400 mb-8">Personalize o visual e o comportamento da IA</p>
+    <button onClick={()=>onNav('home')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-6 text-sm">&larr; {t.back}</button>
+    <h1 className="text-2xl font-bold mb-2">{t.settings}</h1><p className="text-gray-500 dark:text-gray-400 mb-8">{t.manageDesc}</p>
+
+    {/* Language */}
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
+      <h2 className="font-semibold text-lg mb-1">&#127760; {t.language}</h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t.langDesc}</p>
+      <div className="grid grid-cols-3 gap-3">{Object.entries(LANG_LABELS).map(([k,v])=><button key={k} onClick={()=>changeLang(k)} className={`p-3 rounded-xl border-2 text-center text-sm font-medium transition-all ${lang===k?'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30':'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}>{v}</button>)}</div>
+    </div>
 
     {/* AI Model */}
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
-      <h2 className="font-semibold text-lg mb-1 flex items-center gap-2">&#9889; Modelo de IA</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Modelo usado para validacao inteligente de dados</p>
-      {loadingModels?<div className="flex items-center gap-2 text-sm text-gray-400"><span className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"/>Carregando modelos...</div>:
-      <div className="space-y-2">
-        <select value={aiModel} onChange={e=>applyModel(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-          {models.map(m=><option key={m} value={m}>{m}{m===defaultModel?' (padrao)':''}</option>)}
-        </select>
-        <p className="text-xs text-gray-400">Modelo atual: <span className="font-mono accent-text">{aiModel||defaultModel}</span></p>
-      </div>}
+      <h2 className="font-semibold text-lg mb-1">&#9889; {t.aiModel}</h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t.aiModelDesc}</p>
+      {loadingModels?<div className="text-sm text-gray-400">{t.loadingModels}</div>:
+      <div className="space-y-2"><select value={aiModel} onChange={e=>applyModel(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">{models.map(m=><option key={m} value={m}>{m}{m===defaultModel?` (${t.default_})`:''}</option>)}</select>
+        <p className="text-xs text-gray-400">{t.currentModel} <span className="font-mono accent-text">{aiModel||defaultModel}</span></p></div>}
     </div>
 
     {/* Theme */}
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
-      <h2 className="font-semibold text-lg mb-4">Tema</h2>
-      <div className="grid grid-cols-2 gap-3">{[{t:'light',l:'Claro',icon:'☀️'},{t:'dark',l:'Escuro',icon:'🌙'}].map(o=><button key={o.t} onClick={()=>applyTheme(o.t)} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 ${theme===o.t?'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30':'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}><span className="text-3xl">{o.icon}</span><span className="font-medium text-sm">{o.l}</span></button>)}</div>
+      <h2 className="font-semibold text-lg mb-4">{t.theme}</h2>
+      <div className="grid grid-cols-2 gap-3">{[{tm:'light',l:t.light,icon:'☀️'},{tm:'dark',l:t.dark,icon:'🌙'}].map(o=><button key={o.tm} onClick={()=>applyTheme(o.tm)} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 ${theme===o.tm?'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30':'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}><span className="text-3xl">{o.icon}</span><span className="font-medium text-sm">{o.l}</span></button>)}</div>
     </div>
 
-    {/* Accent color */}
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-      <h2 className="font-semibold text-lg mb-4">Cor de destaque</h2>
+    {/* Accent */}
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
+      <h2 className="font-semibold text-lg mb-4">{t.accentColor}</h2>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">{ACCENTS.map(c=><button key={c.v} onClick={()=>applyAccent(c.v)} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${accent===c.v?'ring-2 ring-offset-2 ring-gray-400 dark:ring-offset-gray-900 scale-105':'hover:bg-gray-50 dark:hover:bg-gray-800'}`}><div className="w-10 h-10 rounded-xl shadow-sm" style={{backgroundColor:c.v}}/><span className="text-xs text-gray-500 dark:text-gray-400">{c.n}</span></button>)}</div>
-      <div className="mt-6 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"><h3 className="text-sm font-medium mb-3 text-gray-500">Preview</h3><div className="flex items-center gap-3"><button className="px-4 py-2 accent-bg text-white rounded-xl text-sm font-medium">Primario</button><button className="px-4 py-2 accent-bg-light accent-text rounded-xl text-sm font-medium">Secundario</button><div className="w-3 h-3 rounded-full accent-bg"/><span className="accent-text text-sm font-medium">Link</span></div></div>
+      <div className="mt-6 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"><h3 className="text-sm font-medium mb-3 text-gray-500">{t.preview}</h3><div className="flex items-center gap-3"><button className="px-4 py-2 accent-bg text-white rounded-xl text-sm font-medium">{t.primary}</button><button className="px-4 py-2 accent-bg-light accent-text rounded-xl text-sm font-medium">{t.secondary}</button><span className="accent-text text-sm font-medium">{t.link}</span></div></div>
     </div>
 
-    {/* Tool Library */}
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-6">
-      <h2 className="font-semibold text-lg mb-1 flex items-center gap-2">&#128736; Biblioteca de Validacoes</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Tools geradas automaticamente pela IA e reutilizadas entre tabelas</p>
-      {loadingTools?<div className="flex items-center gap-2 text-sm text-gray-400"><span className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"/>Carregando...</div>:
-      tools.length===0?<p className="text-sm text-gray-400 py-4 text-center">Nenhuma tool criada ainda. Valide um campo com regra AI para criar a primeira.</p>:
-      <div className="space-y-2">
-        <div className="text-xs text-gray-400 mb-2">{tools.length} tool(s) — reutilizadas automaticamente em novas tabelas</div>
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800"><tr>
-              <th className="text-left px-4 py-2 font-medium">Tool</th>
-              <th className="text-left px-4 py-2 font-medium">Regra exemplo</th>
-              <th className="text-left px-4 py-2 font-medium">Usos</th>
-              <th className="text-left px-4 py-2 font-medium">Criada em</th>
-            </tr></thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {tools.map(t=><tr key={t.id}>
-                <td className="px-4 py-2"><span className="font-mono text-xs accent-text">{t.tool_name}</span></td>
-                <td className="px-4 py-2 text-gray-600 dark:text-gray-400 text-xs">{t.rule_example}</td>
-                <td className="px-4 py-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">{t.usage_count}x</span></td>
-                <td className="px-4 py-2 text-xs text-gray-400">{t.created_at?new Date(t.created_at).toLocaleDateString('pt-BR'):'-'}</td>
-              </tr>)}
-            </tbody>
-          </table>
-        </div>
-      </div>}
+    {/* Tools */}
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+      <h2 className="font-semibold text-lg mb-1">&#128736; {t.toolLibrary}</h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t.toolLibDesc}</p>
+      {loadingTools?<div className="text-sm text-gray-400">...</div>:tools.length===0?<p className="text-sm text-gray-400 py-4 text-center">{t.toolEmpty}</p>:
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-800"><tr><th className="text-left px-4 py-2 font-medium">{t.toolName}</th><th className="text-left px-4 py-2 font-medium">{t.ruleExample}</th><th className="text-left px-4 py-2 font-medium">{t.uses}</th><th className="text-left px-4 py-2 font-medium">{t.createdAt}</th></tr></thead>
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">{tools.map(tl=><tr key={tl.id}><td className="px-4 py-2"><span className="font-mono text-xs accent-text">{tl.tool_name}</span></td><td className="px-4 py-2 text-gray-600 dark:text-gray-400 text-xs">{tl.rule_example}</td><td className="px-4 py-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">{tl.usage_count}x</span></td><td className="px-4 py-2 text-xs text-gray-400">{tl.created_at?new Date(tl.created_at).toLocaleDateString():'-'}</td></tr>)}</tbody></table></div>}
     </div>
   </div>
 }
 
-// ====== APP ROUTER ======
+// ====== APP ======
 function App(){
-  const[page,setPage]=useState('home');
-  const[pageId,setPageId]=useState(null);
+  const[page,setPage]=useState('home');const[pageId,setPageId]=useState(null);
   const onNav=(p,id=null)=>{setPage(p);setPageId(id);window.scrollTo(0,0)};
-
-  // Apply saved theme on mount
-  useEffect(()=>{
-    const t=localStorage.getItem('dbx-theme')||'light';
-    document.documentElement.classList.toggle('dark',t==='dark');
-    document.body.className=t==='dark'?'bg-gray-950 text-gray-100':'bg-gray-50 text-gray-900';
-    const a=localStorage.getItem('dbx-accent');
-    if(a){const h=a.replace('#','');const[r,g,b]=[parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];document.documentElement.style.setProperty('--accent',`${r} ${g} ${b}`)}
-  },[]);
-
-  return <ToastProvider>
-    <div className="flex h-screen overflow-hidden">
-      <aside className="hidden lg:flex w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col shrink-0">
-        <div className="h-16 flex items-center px-5 border-b border-gray-200 dark:border-gray-800">
-          <span className="text-xl font-bold tracking-tight">&#128202; DBX <span className="accent-text">CRUDs</span></span>
-        </div>
-        <nav className="flex-1 py-4 px-3 space-y-1">
-          {[{p:'home',l:'Painel',i:'&#127968;'},{p:'create',l:'Nova Tabela',i:'&#10133;'},{p:'settings',l:'Configuracoes',i:'&#9881;'}].map(n=>
-            <button key={n.p} onClick={()=>onNav(n.p)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${page===n.p?'accent-bg text-white shadow-md':'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-              <span dangerouslySetInnerHTML={{__html:n.i}}/>{n.l}
-            </button>
-          )}
-        </nav>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 text-xs text-gray-400">Powered by Databricks Lakebase</div>
-      </aside>
-      <div className="flex-1 overflow-y-auto">
-        <header className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-gray-800 lg:hidden">
-          <span className="font-semibold text-lg">&#128202; DBX CRUDs</span>
-          <div className="ml-auto flex gap-2">
-            <button onClick={()=>onNav('home')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Painel</button>
-            <button onClick={()=>onNav('create')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">+Nova</button>
-            <button onClick={()=>onNav('settings')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">&#9881;</button>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-          {page==='home'&&<Dashboard onNav={onNav}/>}
-          {page==='create'&&<CreateCrud onNav={onNav}/>}
-          {page==='view'&&pageId&&<CrudView id={pageId} onNav={onNav}/>}
-          {page==='edit'&&pageId&&<EditCrud id={pageId} onNav={onNav}/>}
-          {page==='import'&&pageId&&<ImportData id={pageId} onNav={onNav}/>}
-          {page==='settings'&&<Settings onNav={onNav}/>}
-        </main>
-      </div>
-    </div>
-  </ToastProvider>
+  useEffect(()=>{const tm=localStorage.getItem('dbx-theme')||'light';document.documentElement.classList.toggle('dark',tm==='dark');document.body.className=tm==='dark'?'bg-gray-950 text-gray-100':'bg-gray-50 text-gray-900';const a=localStorage.getItem('dbx-accent');if(a){const h=a.replace('#','');const[r,g,b]=[parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];document.documentElement.style.setProperty('--accent',`${r} ${g} ${b}`)}},[]);
+  return <I18nProvider><ToastProvider><AppInner page={page} pageId={pageId} onNav={onNav}/></ToastProvider></I18nProvider>
 }
-
+function AppInner({page,pageId,onNav}){
+  const{t}=useI18n();
+  return <div className="flex h-screen overflow-hidden">
+    <aside className="hidden lg:flex w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col shrink-0">
+      <div className="h-16 flex items-center px-5 border-b border-gray-200 dark:border-gray-800"><span className="text-xl font-bold tracking-tight">&#128202; DBX <span className="accent-text">CRUDs</span></span></div>
+      <nav className="flex-1 py-4 px-3 space-y-1">
+        {[{p:'home',l:t.dashboard,i:'&#127968;'},{p:'create',l:t.newTable,i:'&#10133;'},{p:'settings',l:t.settings,i:'&#9881;'}].map(n=><button key={n.p} onClick={()=>onNav(n.p)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${page===n.p?'accent-bg text-white shadow-md':'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}><span dangerouslySetInnerHTML={{__html:n.i}}/>{n.l}</button>)}
+      </nav>
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 text-xs text-gray-400">{t.powered}</div>
+    </aside>
+    <div className="flex-1 overflow-y-auto">
+      <header className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-gray-800 lg:hidden"><span className="font-semibold text-lg">&#128202; DBX CRUDs</span><div className="ml-auto flex gap-2"><button onClick={()=>onNav('home')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">{t.dashboard}</button><button onClick={()=>onNav('create')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">+</button><button onClick={()=>onNav('settings')} className="px-2 py-1 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-800">&#9881;</button></div></header>
+      <main className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        {page==='home'&&<Dashboard onNav={onNav}/>}
+        {page==='create'&&<CreateCrud onNav={onNav}/>}
+        {page==='view'&&pageId&&<CrudView id={pageId} onNav={onNav}/>}
+        {page==='edit'&&pageId&&<EditCrud id={pageId} onNav={onNav}/>}
+        {page==='import'&&pageId&&<ImportData id={pageId} onNav={onNav}/>}
+        {page==='settings'&&<Settings onNav={onNav}/>}
+      </main>
+    </div>
+  </div>
+}
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
