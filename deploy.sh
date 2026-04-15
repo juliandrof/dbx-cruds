@@ -1,10 +1,10 @@
 #!/bin/bash
 # Deploy DBX CRUDs to Databricks
 # Usage: ./deploy.sh <profile> <email>
-# Example: ./deploy.sh e2-demo-west juliandro.figueiro@databricks.com
+# Example: ./deploy.sh my-profile user@company.com
 
-PROFILE=${1:-e2-demo-west}
-EMAIL=${2:-juliandro.figueiro@databricks.com}
+PROFILE=${1:?Uso: ./deploy.sh <profile> <email>}
+EMAIL=${2:?Uso: ./deploy.sh <profile> <email>}
 
 echo "Deploying to profile: $PROFILE"
 echo "Workspace path: /Users/$EMAIL/dbx-cruds"
