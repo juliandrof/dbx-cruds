@@ -1,5 +1,7 @@
 # DBX CRUDs
 
+> **[English](README_EN.md)** | **[Espanol](README_ES.md)** | **Portugues**
+
 Databricks App para criacao generica de tabelas/formularios com armazenamento no Lakebase. Ideal para substituir planilhas Excel e SharePoint por formularios estruturados com validacao inteligente, importacao de dados e visual personalizavel.
 
 ## Funcionalidades
