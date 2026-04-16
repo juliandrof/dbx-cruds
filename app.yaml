@@ -9,19 +9,23 @@ command:
   - "8000"
 
 env:
-  - name: ENDPOINT_NAME
-    value: '<SEU_ENDPOINT_LAKEBASE>'
   - name: PGHOST
-    value: '<SEU_HOST_LAKEBASE>'
+    value: 'ep-lively-paper-d2kzljpk.database.us-east-1.cloud.databricks.com'
   - name: PGPORT
     value: '5432'
   - name: PGDATABASE
-    value: '<SEU_DATABASE>'
+    value: 'cruds_db'
   - name: PGUSER
-    value: '<SERVICE_PRINCIPAL_ID>'
+    value: '2fa8415e-334d-495f-8e38-9c5e61ae1752'
   - name: PGPASSWORD
-    value: '<SUA_SENHA>'
+    value: 'dbx-cruds-2026'
   - name: PGSSLMODE
     value: 'require'
   - name: SERVING_ENDPOINT
     value: 'databricks-llama-4-maverick'
+
+resources:
+  - name: serving-endpoint
+    serving_endpoint:
+      name: databricks-llama-4-maverick
+      permission: CAN_QUERY
