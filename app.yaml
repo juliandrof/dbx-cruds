@@ -10,15 +10,15 @@ command:
 
 env:
   - name: PGHOST
-    value: 'ep-lively-paper-d2kzljpk.database.us-east-1.cloud.databricks.com'
+    value: 'HOST_HERE'
   - name: PGPORT
     value: '5432'
   - name: PGDATABASE
     value: 'cruds_db'
   - name: PGUSER
-    value: '2fa8415e-334d-495f-8e38-9c5e61ae1752'
+    value: 'USER_HERE'
   - name: PGPASSWORD
-    value: 'dbx-cruds-2026'
+    value: 'PASSWORD_HERE'
   - name: PGSSLMODE
     value: 'require'
   - name: SERVING_ENDPOINT
